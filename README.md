@@ -7,9 +7,9 @@
 Aplikasi web cerdas untuk melacak, memvalidasi, dan mengelola rekam jejak alumni Universitas Muhammadiyah Malang menggunakan pendekatan **Hibrida** (Algoritma Pakar Lokal dan Artificial Intelligence Gemini Flash).
 
 ## 👤 Informasi Pengembang
-* **Nama:** [Tulis Nama Lengkap Kamu Di Sini]
-* **NIM:** [Tulis NIM Kamu Di Sini]
-* **Kelas:** [Tulis Kelas Kamu Di Sini, misal: Rekayasa Kebutuhan D]
+* **Nama:** Leandra Chelsea Geovani Karyono
+* **NIM:** 202310370311421
+* **Kelas:** Rekayasa Kebutuhan D
 
 ---
 
@@ -57,3 +57,9 @@ Aplikasi ini berjalan di sisi Klien (Vanilla JS) menggunakan penyimpanan *LocalS
    ```bash
    git clone [MASUKKAN LINK GITHUB KAMU DI SINI]
    cd TrackingSistem
+
+   Buka file index.html menggunakan browser standar (Chrome/Edge/Firefox) atau jalankan melalui Live Server di VS Code.
+
+Gunakan kredensial berikut untuk masuk ke sistem:
+Username: admin
+Password: umm123
