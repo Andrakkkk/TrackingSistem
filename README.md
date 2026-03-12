@@ -58,8 +58,10 @@ Aplikasi ini berjalan di sisi Klien (Vanilla JS) menggunakan penyimpanan *LocalS
    git clone [MASUKKAN LINK GITHUB KAMU DI SINI]
    cd TrackingSistem
 
-   Buka file index.html menggunakan browser standar (Chrome/Edge/Firefox) atau jalankan melalui Live Server di VS Code.
+2.Buka file index.html menggunakan browser standar (Chrome/Edge/Firefox) atau jalankan melalui Live Server di VS Code.
 
-Gunakan kredensial berikut untuk masuk ke sistem:
+3.Gunakan kredensial berikut untuk masuk ke sistem:
+
 Username: admin
+
 Password: umm123
