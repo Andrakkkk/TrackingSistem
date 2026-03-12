@@ -14,7 +14,7 @@ Aplikasi web cerdas untuk melacak, memvalidasi, dan mengelola rekam jejak alumni
 ---
 
 ## 🔗 Tautan Penting
-* **Source Code Github:** [Masukkan Link Repo Github Kamu Di Sini]
+* **Source Code Github:** https://github.com/Andrakkkk/TrackingSistem.git
 * **Live Website:** [Masukkan Link Web Publish Kamu Di Sini]
 
 ---
