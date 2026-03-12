@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UMM Alumni Tracking | Sistem Cerdas AI & Lokal</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        umm: { DEFAULT: '#b11f24', dark: '#8b181c' },
+                        sidebar: '#1e272e'
+                    },
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-hidden">
+
+    <div id="loginPage" class="h-screen flex items-center justify-center bg-gradient-to-br from-umm to-gray-900 absolute inset-0 z-50">
+        <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md text-center">
+            <div class="mb-6">
+                <img src="https://th.bing.com/th/id/R.62a7466407cb5ee74ea138cfe98b7b16?rik=YcL%2ffiEcbAfbmg&riu=http%3a%2f%2f3.bp.blogspot.com%2f-ZaLGs2T6FIA%2fVqzmxMmkerI%2fAAAAAAAAERQ%2fTu4-OCYK6Jo%2fs1600%2flogo_umm.png&ehk=ra5%2f37XPQgGfGtIkEMRboECD1XWmoUBQcOxb1tKgsNU%3d&risl=&pid=ImgRaw&r=0" alt="UMM Logo" class="w-28 mx-auto mb-4">
+                <h2 class="text-2xl font-bold text-umm">Alumni Tracking</h2>
+                <p class="text-gray-500 text-sm mt-1">Sistem Pelacakan Hibrida (AI & Lokal)</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="relative">
+                    <i class="fas fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input id="username" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm focus:border-transparent outline-none transition" placeholder="Username (admin)">
+                </div>
+                <div class="relative">
+                    <i class="fas fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input id="password" type="password" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm focus:border-transparent outline-none transition" placeholder="Password (umm123)">
+                </div>
+                <button onclick="login()" class="w-full bg-umm hover:bg-umm-dark text-white font-semibold py-3 rounded-xl transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    Masuk ke Sistem
+                </button>
+                <p id="loginError" class="text-red-500 text-sm mt-2 hidden">Username atau Password salah!</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" class="hidden flex h-screen w-full">
+        <aside class="w-64 bg-sidebar text-white flex flex-col flex-shrink-0 shadow-2xl z-20">
+            <div class="p-6 flex items-center gap-3 border-b border-gray-700">
+                <img src="https://th.bing.com/th/id/R.62a7466407cb5ee74ea138cfe98b7b16?rik=YcL%2ffiEcbAfbmg&riu=http%3a%2f%2f3.bp.blogspot.com%2f-ZaLGs2T6FIA%2fVqzmxMmkerI%2fAAAAAAAAERQ%2fTu4-OCYK6Jo%2fs1600%2flogo_umm.png&ehk=ra5%2f37XPQgGfGtIkEMRboECD1XWmoUBQcOxb1tKgsNU%3d&risl=&pid=ImgRaw&r=0" alt="UMM Logo" class="w-8 bg-white rounded-full p-0.5">
+                <h3 class="font-semibold tracking-wider text-sm uppercase">Tracking System</h3>
+            </div>
+            
+            <ul id="navMenu" class="flex-1 px-4 py-6 space-y-2">
+                <li>
+                    <button id="menu-dashboard" onclick="showPage('dashboard')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition bg-umm bg-opacity-20 text-white border-l-4 border-umm">
+                        <i class="fas fa-chart-pie w-5"></i> <span class="font-medium">Laporan Tracking</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="menu-data" onclick="showPage('data')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition text-gray-400 hover:bg-gray-800 hover:text-white border-l-4 border-transparent">
+                        <i class="fas fa-user-plus w-5"></i> <span class="font-medium">Input Target</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="menu-tracking" onclick="showPage('tracking')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition text-gray-400 hover:bg-gray-800 hover:text-white border-l-4 border-transparent">
+                        <i class="fas fa-search w-5"></i> <span class="font-medium">Pusat Tracking</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="menu-verify" onclick="showPage('verify')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition text-gray-400 hover:bg-gray-800 hover:text-white border-l-4 border-transparent">
+                        <i class="fas fa-check-circle w-5"></i> <span class="font-medium">Verifikasi Manual</span>
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="p-4 border-t border-gray-700 space-y-2">
+                <button onclick="exportCSV()" class="w-full flex items-center justify-center gap-2 border border-gray-600 hover:bg-gray-700 text-sm py-3 rounded-xl transition text-gray-300 hover:text-white">
+                    <i class="fas fa-file-export"></i> Export CSV
+                </button>
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-sm py-3 rounded-xl transition text-white shadow-sm border border-red-700">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto bg-gray-100 relative">
+            <div class="p-8 max-w-7xl mx-auto">
+                
+                <section id="dashboard" class="page-section fade-in">
+                    <div class="bg-gradient-to-r from-umm to-red-700 rounded-2xl p-8 text-white mb-8 shadow-lg relative overflow-hidden flex items-center justify-between">
+                        <div class="relative z-10 w-2/3">
+                            <h1 class="text-3xl font-bold mb-3">Selamat Datang di Portal Tracking UMM</h1>
+                            <p class="text-red-100/90 leading-relaxed">Sistem cerdas pelacakan alumni Universitas Muhammadiyah Malang. Mendukung validasi ganda menggunakan Gemini Flash AI maupun Algoritma Pakar Lokal untuk mencocokkan profil dan rekam jejak secara presisi.</p>
+                        </div>
+                        <i class="fas fa-network-wired text-8xl text-white opacity-20 absolute -right-6 -bottom-6"></i>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex items-center gap-5 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 flex-shrink-0 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <span class="text-xs text-gray-500 font-medium uppercase tracking-wide truncate block">Total Terdata</span>
+                                <h3 id="total" class="text-2xl font-bold text-gray-800 mt-0.5">0</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex items-center gap-5 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 flex-shrink-0 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <span class="text-xs text-gray-500 font-medium uppercase tracking-wide truncate block">Teridentifikasi</span>
+                                <h3 id="identified" class="text-2xl font-bold text-gray-800 mt-0.5">0</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex items-center gap-5 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 flex-shrink-0 rounded-full bg-yellow-50 text-yellow-500 flex items-center justify-center text-xl">
+                                <i class="fas fa-user-clock"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <span class="text-xs text-gray-500 font-medium uppercase tracking-wide truncate block">Perlu Verifikasi</span>
+                                <h3 id="verifyCount" class="text-2xl font-bold text-gray-800 mt-0.5">0</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex items-center gap-5 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 flex-shrink-0 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-xl">
+                                <i class="fas fa-user-times"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <span class="text-xs text-gray-500 font-medium uppercase tracking-wide truncate block">Tidak Cocok</span>
+                                <h3 id="notMatchCount" class="text-2xl font-bold text-gray-800 mt-0.5">0</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 text-lg">Distribusi Status Analisis</h3>
+                                    <p class="text-xs text-gray-500">Persentase tingkat keberhasilan pelacakan alumni.</p>
+                                </div>
+                            </div>
+                            <div class="flex-1 w-full flex items-center justify-center relative min-h-[300px]">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col">
+                            <h3 class="font-bold text-gray-800 text-lg mb-1">Riwayat Input Terakhir</h3>
+                            <p class="text-xs text-gray-500 mb-5">5 data alumni terakhir yang diproses sistem.</p>
+                            <div id="historyList" class="flex-1 flex flex-col gap-3 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="data" class="page-section fade-in hidden">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-800">Input Profil Target</h1>
+                        <p class="text-gray-500 mt-1">Masukkan data alumni dan sumber URL untuk dianalisis oleh AI atau Sistem Lokal.</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+                        <form id="form">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap (Sesuai Ijazah)</label>
+                                    <input id="nama" placeholder="Contoh: Muhammad Rizky" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Variasi Nama / Singkatan</label>
+                                    <input id="variasi" placeholder="Contoh: M. Rizky / Rizky M." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Program Studi</label>
+                                    <input id="prodi" placeholder="Contoh: Teknik Informatika" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Tahun Lulus</label>
+                                    <input id="tahun" type="number" placeholder="Contoh: 2022" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi / Kota Target</label>
+                                    <input id="kota" placeholder="Contoh: Malang" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Platform Eksternal (Temuan)</label>
+                                    <select id="platform" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition cursor-pointer">
+                                        <option value="">-- Pilih Platform --</option>
+                                        <option value="LinkedIn">LinkedIn</option>
+                                        <option value="Google Scholar">Google Scholar</option>
+                                        <option value="ResearchGate">ResearchGate</option>
+                                        <option value="ORCID">ORCID</option>
+                                        <option value="GitHub">GitHub</option>
+                                        <option value="Facebook">Facebook</option>
+                                        <option value="Instagram">Instagram</option>
+                                        <option value="Website Perusahaan">Website Perusahaan</option>
+                                        <option value="Portal Berita">Portal Berita</option>
+                                        <option value="Mesin Pencari Web">Mesin Pencari Web</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">URL Bukti / Profil Eksternal</label>
+                                    <input id="urlProfil" type="url" placeholder="https://..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                            </div>
+                            <button type="submit" class="bg-umm hover:bg-umm-dark text-white px-8 py-3 rounded-xl font-medium shadow-md transition transform hover:-translate-y-0.5">
+                                <i class="fas fa-save mr-2"></i> Simpan Data & Lanjutkan
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <section id="tracking" class="page-section fade-in hidden">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-800">Pusat Disambiguasi Identitas</h1>
+                        <p class="text-gray-500 mt-1">Pilih metode pelacakan: Gunakan algoritma lokal untuk validasi aturan pasti, atau gunakan AI untuk analisis bahasa alami.</p>
+                    </div>
+                    
+                    <div class="overflow-x-auto pb-10">
+                        <table class="w-full text-left border-separate border-spacing-y-4">
+                            <thead>
+                                <tr class="text-gray-500 text-sm uppercase tracking-wider">
+                                    <th class="px-5 py-2 font-medium">Data Kandidat</th>
+                                    <th class="px-5 py-2 font-medium text-center">Sumber</th>
+                                    <th class="px-5 py-2 font-medium text-center">Status Analisis</th>
+                                    <th class="px-5 py-2 font-medium text-center">Skor Hasil</th>
+                                    <th class="px-5 py-2 font-medium text-center">Aksi Sistem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table" class="text-sm"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="verify" class="page-section fade-in hidden">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-800">Verifikasi Manual</h1>
+                        <p class="text-gray-500 mt-1">Tinjau ulang kandidat dengan skor meragukan berdasarkan opini sistem.</p>
+                    </div>
+                    <div id="verifyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
