@@ -1,6 +1,4 @@
-Tentu, ini adalah draf lengkap untuk file `README.md` GitHub kamu. Draf ini sudah disesuaikan dengan rancangan sistem di dokumen PDF kamu (Sistem Pelacakan Alumni), fitur hibrida (AI & Lokal) yang baru saja kita bangun, serta tabel pengujian aspek kualitas sesuai instruksi tugas harianmu.
 
-Silakan salin teks di bawah ini dan tempel ke dalam file `README.md` di repository GitHub kamu. Jangan lupa untuk mengubah teks yang ada di dalam kurung siku `[...]` dengan link aslinya nanti.
 
 ---
 
