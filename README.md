@@ -1,4 +1,4 @@
-# 🎓 UMM Alumni Trace (Hybrid Tracking System)
+# 🎓 UMM Alumni Tracking (Hybrid Tracking System)
 
 ![Status](https://img.shields.io/badge/Status-Completed-success)
 ![Platform](https://img.shields.io/badge/Platform-Web-blue)
