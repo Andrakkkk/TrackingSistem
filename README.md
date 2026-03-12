@@ -15,7 +15,7 @@ Aplikasi web cerdas untuk melacak, memvalidasi, dan mengelola rekam jejak alumni
 
 ## 🔗 Tautan Penting
 * **Source Code Github:** https://github.com/Andrakkkk/TrackingSistem.git
-* **Live Website:** [Masukkan Link Web Publish Kamu Di Sini]
+* **Live Website:** https://alumni-tracking-umm.netlify.app/
 
 ---
 
