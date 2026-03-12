@@ -1,88 +1,59 @@
+# 🎓 UMM Alumni Trace (Hybrid Tracking System)
 
+![Status](https://img.shields.io/badge/Status-Completed-success)
+![Platform](https://img.shields.io/badge/Platform-Web-blue)
+![Tech Stack](https://img.shields.io/badge/Tech-HTML%20%7C%20Tailwind%20%7C%20Vanilla%20JS-orange)
 
----
+Aplikasi web cerdas untuk melacak, memvalidasi, dan mengelola rekam jejak alumni Universitas Muhammadiyah Malang menggunakan pendekatan **Hibrida** (Algoritma Pakar Lokal dan Artificial Intelligence Gemini Flash).
 
-```markdown
-# 🎓 UMM Alumni Trace (Sistem Pelacakan Alumni Hibrida)
-
-Sistem Pelacakan Alumni cerdas berbasis web yang dirancang untuk menemukan, memvalidasi, dan mengelola rekam jejak alumni Universitas Muhammadiyah Malang (UMM) menggunakan pendekatan Hibrida (Algoritma Pakar Lokal dan Gemini Flash AI).
-
-**Informasi Pengembang:**
-* [cite_start]**Nama:** Leandra Chelsea Geovani Karyono [cite: 1]
-* [cite_start]**NIM:** 202310370311421 [cite: 2]
-* [cite_start]**Kelas:** Rekayasa Kebutuhan D [cite: 3]
+## 👤 Informasi Pengembang
+* **Nama:** [Tulis Nama Lengkap Kamu Di Sini]
+* **NIM:** [Tulis NIM Kamu Di Sini]
+* **Kelas:** [Tulis Kelas Kamu Di Sini, misal: Rekayasa Kebutuhan D]
 
 ---
 
 ## 🔗 Tautan Penting
-* **Source Code Github:** [Masukkan Link Repository Github Anda Di Sini]
-* **Live Website / Publish Web:** [Masukkan Link Web Hosting (misal: Vercel/Netlify/Github Pages) Di Sini]
+* **Source Code Github:** [Masukkan Link Repo Github Kamu Di Sini]
+* **Live Website:** [Masukkan Link Web Publish Kamu Di Sini]
 
 ---
 
 ## 📖 Deskripsi Sistem
-Aplikasi web ini merupakan implementasi dari perancangan arsitektur dan antarmuka pada Daily Project sebelumnya. [cite_start]Sistem Pelacakan Alumni ini dirancang agar Admin dapat memasukkan data dasar alumni [cite: 240, 258][cite_start], membuat profil pencarian [cite: 245, 258][cite_start], dan melakukan ekstraksi informasi serta disambiguasi identitas dari berbagai sumber eksternal (seperti LinkedIn, Google Scholar, GitHub, dll)[cite: 249, 251, 258]. 
-
-Sistem ini kini dilengkapi dengan dua metode pelacakan:
-1. **Lacak Lokal (Algoritma Pakar):** Menggunakan logika validasi *rule-based* untuk mencocokkan kemiripan string, alias, dan URL.
-2. **Lacak AI (Gemini API):** Menggunakan NLP (Natural Language Processing) untuk mengevaluasi dan memberikan skor relevansi secara otomatis.
-
----
+Sistem ini memfasilitasi admin untuk melakukan pelacakan data alumni di berbagai platform eksternal. Sistem dilengkapi dengan dua metode validasi pencocokan profil:
+1. **Lacak Lokal (Algoritma Pakar):** Menggunakan logika validasi *rule-based* untuk mendeteksi anomali input, kemiripan string, variasi nama (alias), dan relevansi URL.
+2. **Lacak AI (Gemini Flash API):** Menggunakan *Natural Language Processing* (NLP) untuk menganalisis dan memberikan argumen kontekstual terhadap kecocokan profil alumni.
 
 ## 🚀 Fitur Utama
-1. [cite_start]**Input Data Alumni:** Admin memasukkan data alumni ke dalam sistem untuk ditargetkan[cite: 240, 258].
-2. [cite_start]**Pusat Pelacakan (Tracking):** Sistem menjalankan proses pencarian dan disambiguasi identitas[cite: 244, 251, 258]. Terdapat opsi eksekusi *Lacak AI* maupun *Lacak Lokal*.
-3. [cite_start]**Verifikasi Manual:** Fitur bagi admin untuk memverifikasi (Tetapkan/Tolak) jika data kandidat masih meragukan (Skor 50-80%)[cite: 241, 258].
-4. [cite_start]**Lihat Laporan Alumni:** Dashboard interaktif dengan grafik Chart.js untuk melihat laporan status kelulusan/pelacakan alumni[cite: 243, 258].
-5. [cite_start]**Export CSV:** Sistem menyimpan hasil pelacakan ke database lokal dan dapat diunduh[cite: 252, 258].
+1. **Pusat Trace (Tracking):** Eksekusi pencarian ganda (Lokal & AI) untuk mendapatkan skor relevansi profil kandidat.
+2. **Verifikasi Manual:** Fitur bagi admin untuk meninjau ulang dan menetapkan/menolak profil dengan status ambigu.
+3. **Laporan Trace (Dashboard):** Visualisasi data interaktif menggunakan Chart.js untuk memantau distribusi status kelulusan/pelacakan alumni.
+4. **Export CSV:** Unduh laporan hasil pelacakan lengkap beserta alasan dari sistem.
 
 ---
 
-## 🧪 Pengujian Sistem (Kualitas Perangkat Lunak)
+## 🧪 Pengujian Aspek Kualitas Sistem
 
-Berikut adalah hasil pengujian sistem berdasarkan aspek kualitas yang telah ditentukan pada fase desain (Daily Project 2):
+Berikut adalah hasil pengujian sistem berdasarkan skenario dan aspek kualitas perangkat lunak:
 
-| ID Test | Skenario Pengujian | Aspek Kualitas | Hasil yang Diharapkan | Hasil Aktual | Status |
-| :--- | :--- | :--- | :--- | :--- | :---: |
-| **TC-01** | [cite_start]Admin memasukkan data alumni melalui form[cite: 240, 258]. | *Functional Suitability* | Data berhasil disimpan ke LocalStorage dan muncul di tabel Pusat Pelacakan dengan status "Belum Dilacak". | Data berhasil disimpan dan dirender di tabel. | ✅ PASS |
-| **TC-02** | Menjalankan "Lacak Lokal" pada data kandidat. | *Performance Efficiency* | Sistem memproses algoritma pencocokan dalam waktu < 1 detik dan memberikan skor relevansi. | Perhitungan selesai dalam ~600ms, UI terupdate. | ✅ PASS |
-| **TC-03** | Menjalankan "Lacak AI" via API Gemini. | *Functional Suitability* & *Reliability* | Sistem mengirim prompt ke API, menunggu respons, dan mengurai JSON balasan menjadi skor valid. | Data API berhasil diekstrak dan mengubah skor & status. | ✅ PASS |
-| **TC-04** | Menguji toleransi batasan API (Error 429). | *Reliability* | Sistem tidak *crash* jika limit API Google habis, melainkan memberikan pesan fallback yang jelas. | Sistem menangkap error `catch` dan menampilkan pesan koneksi gagal di tabel. | ✅ PASS |
-| **TC-05** | [cite_start]Admin memverifikasi kandidat di menu "Verifikasi Manual"[cite: 241, 258]. | *Functional Suitability* | Mengklik tombol "Tetapkan" atau "Tolak" mengubah status menjadi Teridentifikasi/Tidak Cocok tanpa mengubah skor asli. | Status berubah, kartu hilang dari daftar verifikasi, keterangan tersimpan. | ✅ PASS |
-| **TC-06** | [cite_start]Mengakses Dashboard / Laporan Alumni[cite: 243, 258]. | *Usability* | Grafik donat (Chart.js) me-render proporsi status dengan akurat sesuai jumlah data. | Grafik termuat dengan benar, responsif, dan *tooltip* berfungsi. | ✅ PASS |
-| **TC-07** | Mengunduh hasil laporan (Export CSV). | *Functional Suitability* | Sistem menghasilkan file `.csv` yang berisi semua parameter kandidat termasuk Alasan Sistem. | File terunduh dengan format pemisah koma (comma-separated) yang benar. | ✅ PASS |
-| **TC-08** | Menguji UI pada ukuran layar Mobile/HP. | *Usability* | Tampilan responsif, menu sidebar tersembunyi atau tabel dapat di-scroll menyamping secara rapi. | Elemen menyesuaikan grid Tailwind CSS dengan sempurna. | ✅ PASS |
+| ID | Skenario Pengujian | Aspek Kualitas | Hasil Aktual | Status |
+| :---: | :--- | :--- | :--- | :---: |
+| **01** | Input data target alumni via form HTML. | *Functional Suitability* | Data berhasil disimpan di *LocalStorage* dan muncul di tabel Pusat Trace. | ✅ PASS |
+| **02** | Eksekusi "Lacak Lokal" pada tabel. | *Performance Efficiency* | Sistem memproses algoritma dan menghitung skor di bawah 1 detik tanpa membebani browser. | ✅ PASS |
+| **03** | Eksekusi "Lacak AI" via integrasi Gemini. | *Reliability* | Sistem berhasil mengirim *prompt*, menerima JSON, dan mengubah status UI sesuai *response* AI. | ✅ PASS |
+| **04** | Penanganan Error Limit API (429). | *Reliability* | Sistem memberikan pesan *fallback* (koneksi gagal) di UI alih-alih mengalami *crash* total. | ✅ PASS |
+| **05** | Admin memverifikasi kandidat secara manual. | *Functional Suitability* | Menekan "Tetapkan/Tolak" berhasil mengubah status kandidat dan menyembunyikannya dari antrean verifikasi. | ✅ PASS |
+| **06** | Merender visualisasi Laporan Trace. | *Usability* | *Doughnut chart* (Chart.js) tampil akurat, responsif, dan *tooltip* berfungsi saat kursor diarahkan. | ✅ PASS |
+| **07** | Mengunduh hasil pelacakan. | *Functional Suitability* | File `.csv` terunduh dengan kolom format yang sesuai (termasuk kolom 'Metode Lacak'). | ✅ PASS |
+| **08** | Menguji UI pada ukuran layar kecil/HP. | *Usability* | Tata letak (Tailwind CSS) beradaptasi menjadi format tumpuk vertikal dan tabel dapat di-*scroll* menyamping. | ✅ PASS |
 
 ---
 
-## 🛠️ Cara Menjalankan Secara Lokal (Instalasi)
+## 🛠️ Cara Menjalankan Secara Lokal
 
-Karena aplikasi ini berjalan di sisi Klien (Front-end Vanilla JS) menggunakan *LocalStorage*, tidak diperlukan instalasi server *backend* yang rumit.
+Aplikasi ini berjalan di sisi Klien (Vanilla JS) menggunakan penyimpanan *LocalStorage*. Tidak diperlukan instalasi backend.
 
-1. **Clone Repository:**
+1. Lakukan kloning repository ini:
    ```bash
-   git clone [MASUKKAN LINK GITHUB ANDA DI SINI]
-   cd umm-alumni-trace
-
-```
-
-2. **Jalankan Aplikasi:**
-* Buka file `index.html` langsung di browser Anda (Chrome/Firefox/Edge).
-* ATAU jalankan melalui ekstensi *Live Server* di VS Code.
-
-
-3. **Kredensial Login:**
-* **Username:** admin
-* **Password:** umm123
-
-
-
----
-
-*Dibuat untuk memenuhi tugas Daily Project Rekayasa Kebutuhan D Universitas Muhammadiyah Malang.*
-
-```
-
-**Tips:** Jangan lupa untuk mengubah teks `[Masukkan Link Repository Github Anda Di Sini]` dan `[Masukkan Link Web Hosting Di Sini]` di baris atas setelah kamu mem-publish websitenya (misalnya menggunakan Vercel atau GitHub Pages).
-
-```
+   git clone [MASUKKAN LINK GITHUB KAMU DI SINI]
+   cd TrackingSistem
