@@ -14,7 +14,6 @@ Aplikasi web cerdas untuk melacak, memvalidasi, dan mengelola rekam jejak alumni
 ---
 
 ## 🔗 Tautan Penting
-* **Source Code Github:** https://github.com/Andrakkkk/TrackingSistem.git
 * **Live Website:** https://alumni-tracking-umm-v2.netlify.app/
 
 ---
@@ -58,9 +57,9 @@ Aplikasi ini berjalan di sisi Klien (Vanilla JS) menggunakan penyimpanan *LocalS
    git clone [MASUKKAN LINK GITHUB KAMU DI SINI]
    cd TrackingSistem
 
-2.Buka file index.html menggunakan browser standar (Chrome/Edge/Firefox) atau jalankan melalui Live Server di VS Code.
+2. Buka file index.html menggunakan browser standar (Chrome/Edge/Firefox) atau jalankan melalui Live Server di VS Code.
 
-3.Gunakan kredensial berikut untuk masuk ke sistem:
+3. Gunakan kredensial berikut untuk masuk ke sistem:
 
 Username: admin
 
