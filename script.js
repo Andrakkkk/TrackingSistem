@@ -170,7 +170,7 @@ function lacakLokal(i) {
 // FUNGSI PELACAKAN AI (GEMINI)
 // ==========================================
 async function analisisDenganGemini(dataKandidat) {
-    const apiKey = "AIzaSyClz2mySrDkH4a7gx0rgYOaj7v4po4xwOo"; // api ai nya ku ganti
+    const apiKey = "AIzaS"; // api ai nya ku ganti
     const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
     const promptText = `
