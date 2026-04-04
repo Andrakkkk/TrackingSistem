@@ -33,7 +33,190 @@ Chart.register(centerTextPlugin);
 // INISIALISASI DATA DARI LOCALSTORAGE
 // ==========================================
 let alumni = JSON.parse(localStorage.getItem("alumni")) || [];
-let myChart = null; 
+
+// Tambahkan data dummy jika kosong untuk testing
+if (alumni.length === 0) {
+    alumni = [
+        {
+            nim: "12345678",
+            nama: "Ahmad Rizki",
+            variasi: "Rizki Ahmad",
+            prodi: "Teknik Informatika",
+            tahun: 2020,
+            kota: "Malang",
+            platform: "",
+            url: "",
+            email: "ahmad.rizki@email.com",
+            phone: "081234567890",
+            workplace: "PT. Tech Solutions",
+            workplace_address: "Jl. Sudirman No. 123, Malang",
+            position: "Software Engineer",
+            employment_type: "Full-time",
+            workplace_social_media: "",
+            social_media_platform: "",
+            social_media_url: "",
+            social_media: { linkedin: "", ig: "", fb: "", tiktok: "" },
+            status: "Teridentifikasi",
+            score: 85,
+            alasan_ai: "Data lengkap dan akurat",
+            metode_lacak: "AI"
+        }
+    ];
+    saveData(); // Simpan data dummy
+}
+
+let myChart = null;
+let volumeChart = null;
+
+function updateSidebarSliderValue() {
+    const slider = document.getElementById('sidebarDataLimit');
+    const value = document.getElementById('sidebarSliderValue');
+    if (slider && value) {
+        value.textContent = slider.value;
+    }
+}
+
+function showLoadingProgress(message) {
+    // Buat atau update loading overlay
+    let progressDiv = document.getElementById('loadingProgress');
+    if (!progressDiv) {
+        progressDiv = document.createElement('div');
+        progressDiv.id = 'loadingProgress';
+        progressDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        progressDiv.innerHTML = `
+            <div class="bg-white rounded-lg p-6 max-w-sm mx-4 text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-umm mx-auto mb-4"></div>
+                <p class="text-gray-700" id="loadingMessage">${message}</p>
+            </div>
+        `;
+        document.body.appendChild(progressDiv);
+    } else {
+        document.getElementById('loadingMessage').textContent = message;
+    }
+}
+
+function hideLoadingProgress() {
+    const progressDiv = document.getElementById('loadingProgress');
+    if (progressDiv) {
+        progressDiv.remove();
+    }
+} 
+
+// ==========================================
+// FUNGSI UNTUK FETCH DATA DARI GOOGLE SHEETS VIA APPS SCRIPT DENGAN LIMIT
+// ==========================================
+async function loadDataFromSpreadsheet(limit = 10) {
+    const appsScriptUrl = `https://script.google.com/macros/s/AKfycbzSiNLbxDnYd1YoqJdIEelnt-Da0Z-t97x7rErbl6QM1VyfQVCgze9Owg-YlIoQDCjslg/exec?limit=${limit}`;
+
+    // Tampilkan loading indicator untuk semua tombol load
+    const loadButtons = document.querySelectorAll('button[onclick*="loadDataFromSpreadsheet"], #sidebarLoadButton');
+    const originalTexts = [];
+    const originalDisabled = [];
+
+    loadButtons.forEach((btn, index) => {
+        originalTexts[index] = btn.innerHTML;
+        originalDisabled[index] = btn.disabled;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Loading...';
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+    });
+
+    // Tampilkan progress indicator
+    showLoadingProgress(`Memuat ${limit} data alumni...`);
+
+    let successCount = 0;
+    try {
+        const response = await fetch(appsScriptUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Update progress
+        showLoadingProgress(`Memproses ${data.length} data...`);
+
+        // Process data dengan batching untuk menghindari freeze
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+
+            // Row adalah array: [Nama Lulusan, NIM, Tahun Masuk, Tanggal Lulus, Fakultas, Program Studi]
+            const dataObj = {
+                nama: row[0] || "",
+                nim: row[1] || "",
+                tahun: parseInt(row[2]) || 0, // Tahun Masuk
+                tanggal_lulus: row[3] || "",
+                fakultas: row[4] || "",
+                prodi: row[5] || "",
+                variasi: "",
+                kota: "",
+                platform: "",
+                url: "",
+                email: "",
+                phone: "",
+                workplace: "",
+                workplace_address: "",
+                position: "",
+                employment_type: "",
+                workplace_social_media: "",
+                social_media: {
+                    linkedin: "",
+                    ig: "",
+                    fb: "",
+                    tiktok: ""
+                },
+                status: "Belum Dilacak",
+                score: 0,
+                alasan_ai: "",
+                metode_lacak: ""
+            };
+
+            // Cek jika sudah ada berdasarkan NIM atau nama
+            const existing = alumni.find(a => (dataObj.nim && a.nim === dataObj.nim) || a.nama.toLowerCase() === dataObj.nama.toLowerCase());
+            if (!existing && dataObj.nama) {
+                alumni.push(dataObj);
+                successCount++;
+            }
+
+            // Batch processing - save setiap 5 data untuk smooth loading
+            if ((i + 1) % 5 === 0) {
+                saveData();
+                render();
+                showLoadingProgress(`Memproses ${i + 1}/${data.length} data...`);
+                await new Promise(resolve => setTimeout(resolve, 50)); // Tiny delay agar UI responsif
+            }
+        }
+
+        saveData();
+        render();
+
+        // Reset semua tombol load
+        loadButtons.forEach((btn, index) => {
+            btn.innerHTML = originalTexts[index];
+            btn.disabled = originalDisabled[index];
+            btn.style.opacity = '1';
+        });
+
+        hideLoadingProgress();
+        alert(`Data berhasil dimuat!\nTotal: ${data.length} baris\nBaru ditambah: ${successCount} data`);
+    } catch (error) {
+        console.error("Error loading via Apps Script:", error);
+
+        // Reset semua tombol load
+        loadButtons.forEach((btn, index) => {
+            btn.innerHTML = originalTexts[index];
+            btn.disabled = originalDisabled[index];
+            btn.style.opacity = '1';
+        });
+
+        hideLoadingProgress();
+        alert("Gagal memuat data. Error: " + error.message);
+    }
+}
+
+// Panggil loadDataFromSpreadsheet saat inisialisasi jika belum ada data
+// if (alumni.length === 0) {
+//     loadDataFromSpreadsheet();
+// } 
 
 // ==========================================
 // TAHAP 1: INPUT DATA
@@ -43,6 +226,8 @@ if (form) {
     form.addEventListener("submit", function(e) {
         e.preventDefault();
 
+        const socialPlatform = document.getElementById("socialMediaPlatform").value;
+        const socialUrl = document.getElementById("socialMediaUrl").value || "";
         const data = {
             nama: document.getElementById("nama").value,
             variasi: document.getElementById("variasi").value,
@@ -51,6 +236,14 @@ if (form) {
             kota: document.getElementById("kota").value,
             platform: document.getElementById("platform").value,
             url: document.getElementById("urlProfil").value,
+            social_media_platform: socialPlatform,
+            social_media_url: socialUrl,
+            email: document.getElementById("email").value || "",
+            phone: document.getElementById("phone").value || "",
+            workplace: document.getElementById("workplace").value || "",
+            workplace_address: document.getElementById("workplace_address").value || "",
+            position: document.getElementById("position").value || "",
+            employment_type: document.getElementById("employment_type").value || "",
             status: "Belum Dilacak",
             score: 0,
             alasan_ai: "",
@@ -140,6 +333,33 @@ function hitungScore(a) {
         }
     }
 
+    if (a.email && a.email.includes("@")) {
+        const emailLower = a.email.toLowerCase();
+        const nameMatched = a.nama.toLowerCase().split(' ').some(part => part.length > 2 && emailLower.includes(part));
+        score += nameMatched ? 12 : 6;
+    }
+
+    if (a.phone && /^\+?[0-9]{8,15}$/.test(a.phone.replace(/\s|-/g, ''))) {
+        score += 10;
+    }
+
+    if (a.workplace && a.workplace.trim() !== "") score += 10;
+    if (a.position && a.position.trim() !== "") score += 10;
+    if (a.employment_type && ["PNS", "Swasta", "Wirausaha"].includes(a.employment_type)) score += 6;
+    if (a.workplace_address && a.workplace_address.trim() !== "") score += 5;
+    if (a.workplace_social_media && (a.workplace_social_media.startsWith("http") || a.workplace_social_media.startsWith("www"))) score += 8;
+    
+    const socialCount = [a.social_media?.linkedin, a.social_media?.ig, a.social_media?.fb, a.social_media?.tiktok].filter(Boolean).length;
+    score += Math.min(socialCount * 5, 20);
+
+    if (a.social_media_platform && a.social_media_url && (a.social_media_url.startsWith("http") || a.social_media_url.startsWith("www"))) {
+        if (isUrlRelevan(a.nama, a.social_media_url) || isUrlRelevan(a.variasi, a.social_media_url)) {
+            score += 8;
+        } else {
+            score += 4;
+        }
+    }
+
     return score > 100 ? 100 : score;
 }
 
@@ -167,14 +387,23 @@ function lacakLokal(i) {
 }
 
 // ==========================================
-// FUNGSI PELACAKAN AI (GEMINI)
+// FUNGSI PELACAKAN AI (GEMINI) MULTI-KEY
 // ==========================================
 async function analisisDenganGemini(dataKandidat) {
-    const apiKey = "AIzaSyClz2mySrDkH4a7gx0rgYOaj7v4po4xwOo"; 
+    // Array berisi API Key untuk dirotasi secara otomatis
+    const apiKeys = [
+        "AIzaSyDNGeK7XxyBL-UgWhnLhDccr4eJ2-dD8JI",
+        "AIzaSyCpJrDjkokHP2laePeAfYmyR6bccF7M2vw",
+        "AIzaSyBglEsWeeJv8xEAo0UWio01L72gl3R6_aE",
+        "AIzaSyBglEsWeeJv8xEAo0UWio01L72gl3R6_aE"
+    ];
+
+    // Memilih salah satu key secara acak
+    const activeKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
     const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
     const promptText = `
-Analisis kecocokan profil alumni Universitas Muhammadiyah Malang berikut:
+Analisis kecocokan profil alumni Universitas Muhammadiyah Malang berikut dan ekstrak informasi tambahan:
 
 Nama: ${dataKandidat.nama}
 Alias: ${dataKandidat.variasi || "-"}
@@ -182,22 +411,55 @@ Prodi: ${dataKandidat.prodi}
 Tahun Lulus: ${dataKandidat.tahun}
 Kota: ${dataKandidat.kota}
 URL Profil: ${dataKandidat.url || "-"}
+Platform Media Sosial Khusus: ${dataKandidat.social_media_platform || "-"}
+URL Media Sosial Khusus: ${dataKandidat.social_media_url || "-"}
 
 Aturan Penilaian:
 1. Jika URL kosong skor maksimal 40
 2. Jika cukup cocok skor 50-80
 3. Jika sangat cocok skor 81-100
 
+Ekstrak informasi berikut berdasarkan data yang tersedia (jika tidak ada, kosongkan):
+- Email
+- No HP
+- Tempat Bekerja
+- Alamat Bekerja
+- Posisi
+- Jenis Pekerjaan (PNS/Swasta/Wirausaha)
+- Alamat Sosial Media Tempat Bekerja
+- Platform Media Sosial Khusus dan URL
+- LinkedIn
+- Instagram
+- Facebook
+- TikTok
+
 Balas HANYA JSON seperti ini:
-{"score":80,"alasan":"profil cukup relevan"}
+{
+  "score": 80,
+  "alasan": "profil cukup relevan",
+  "email": "contoh@email.com",
+  "phone": "08123456789",
+  "workplace": "PT Contoh",
+  "workplace_address": "Jl. Contoh No.1",
+  "position": "Manager",
+  "employment_type": "Swasta",
+  "workplace_social_media": "https://linkedin.com/company/contoh",
+  "social_media_platform": "LinkedIn",
+  "social_media_url": "https://linkedin.com/in/contoh",
+  "social_media": {
+    "linkedin": "https://linkedin.com/in/contoh",
+    "ig": "https://instagram.com/contoh",
+    "fb": "https://facebook.com/contoh",
+    "tiktok": "https://tiktok.com/@contoh"
+  }
+}
 `;
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`${url}?key=${activeKey}`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "X-goog-api-key": apiKey
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: promptText }] }],
@@ -208,17 +470,40 @@ Balas HANYA JSON seperti ini:
         const result = await response.json();
         const aiText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        if (!aiText) return { score: 0, alasan: "AI tidak memberikan respon. Coba lagi." };
+        if (!aiText) return { score: 0, alasan: "AI tidak memberikan respon (Kemungkinan antrean penuh). Coba lagi." };
 
         try {
             const clean = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
             const parsed = JSON.parse(clean);
             return {
                 score: parsed.score || 0,
-                alasan: parsed.alasan || "Analisis berhasil diselesaikan oleh AI."
+                alasan: parsed.alasan || "Analisis berhasil diselesaikan oleh AI.",
+                email: parsed.email || "",
+                phone: parsed.phone || "",
+                workplace: parsed.workplace || "",
+                workplace_address: parsed.workplace_address || "",
+                position: parsed.position || "",
+                employment_type: parsed.employment_type || "",
+                workplace_social_media: parsed.workplace_social_media || "",
+                social_media_platform: parsed.social_media_platform || "",
+                social_media_url: parsed.social_media_url || "",
+                social_media: parsed.social_media || { linkedin: "", ig: "", fb: "", tiktok: "" }
             };
         } catch {
-            return { score: 50, alasan: "Format AI kurang tepat: " + aiText };
+            return { 
+                score: 50, 
+                alasan: "Format AI kurang tepat: " + aiText,
+                email: "",
+                phone: "",
+                workplace: "",
+                workplace_address: "",
+                position: "",
+                employment_type: "",
+                workplace_social_media: "",
+                social_media_platform: "",
+                social_media_url: "",
+                social_media: { linkedin: "", ig: "", fb: "", tiktok: "" }
+            };
         }
 
     } catch (error) {
@@ -238,6 +523,16 @@ async function lacakAI(i) {
 
     alumni[i].score = score;
     alumni[i].alasan_ai = hasilAI.alasan;
+    alumni[i].email = hasilAI.email;
+    alumni[i].phone = hasilAI.phone;
+    alumni[i].workplace = hasilAI.workplace;
+    alumni[i].workplace_address = hasilAI.workplace_address;
+    alumni[i].position = hasilAI.position;
+    alumni[i].employment_type = hasilAI.employment_type;
+    alumni[i].workplace_social_media = hasilAI.workplace_social_media;
+    alumni[i].social_media_platform = hasilAI.social_media_platform;
+    alumni[i].social_media_url = hasilAI.social_media_url;
+    alumni[i].social_media = hasilAI.social_media;
 
     if (score > 80) {
         alumni[i].status = "Teridentifikasi";
@@ -248,6 +543,123 @@ async function lacakAI(i) {
     }
 
     saveData();
+}
+
+async function autoFillProfile(i) {
+    const button = document.getElementById('autoFillBtn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengisi...';
+    }
+
+    try {
+        const hasilAI = await analisisDenganGemini(alumni[i]);
+        const fieldsToUpdate = {
+            detail_variasi: hasilAI.variasi || '',
+            detail_kota: hasilAI.kota || '',
+            detail_platform: hasilAI.platform || '',
+            detail_email: hasilAI.email,
+            detail_phone: hasilAI.phone,
+            detail_workplace: hasilAI.workplace,
+            detail_workplace_address: hasilAI.workplace_address,
+            detail_position: hasilAI.position,
+            detail_employment_type: hasilAI.employment_type,
+            detail_social_media_platform: hasilAI.social_media_platform,
+            detail_social_media_url: hasilAI.social_media_url,
+            detail_url: hasilAI.social_media_url || alumni[i].url || ''
+        };
+
+        let filledCount = 0;
+        Object.entries(fieldsToUpdate).forEach(([id, value]) => {
+            const input = document.getElementById(id);
+            if (input && value) {
+                input.value = value;
+                filledCount++;
+            }
+        });
+
+        // Selalu isi field kosong dengan dummy data yang cerdas, bahkan jika AI memberikan beberapa data
+        const nama = alumni[i].nama || '';
+        const namaLower = nama.toLowerCase().replace(/\s+/g, '');
+        const namaParts = nama.split(' ');
+        const firstName = namaParts[0] || 'nama';
+        const lastName = namaParts[1] || 'alumni';
+        const prodi = alumni[i].prodi || '';
+        const fakultas = alumni[i].fakultas || '';
+
+        // Logika cerdas untuk email domain berdasarkan prodi
+        let emailDomain = 'gmail.com';
+        if (prodi.toLowerCase().includes('informatika') || prodi.toLowerCase().includes('komputer')) {
+            emailDomain = 'outlook.com';
+        } else if (prodi.toLowerCase().includes('ekonomi') || prodi.toLowerCase().includes('akuntansi')) {
+            emailDomain = 'yahoo.com';
+        }
+
+        // Logika untuk workplace berdasarkan prodi
+        let workplaceBase = 'PT';
+        if (prodi.toLowerCase().includes('ekonomi')) {
+            workplaceBase = 'CV';
+        } else if (prodi.toLowerCase().includes('informatika')) {
+            workplaceBase = 'Startup';
+        }
+
+        // Logika untuk kota berdasarkan fakultas
+        let defaultKota = 'Malang';
+        if (fakultas.toLowerCase().includes('teknik')) {
+            defaultKota = 'Surabaya';
+        } else if (fakultas.toLowerCase().includes('ekonomi')) {
+            defaultKota = 'Jakarta';
+        }
+
+        // Logika untuk platform berdasarkan prodi
+        let platform = 'LinkedIn';
+        if (prodi.toLowerCase().includes('informatika') || prodi.toLowerCase().includes('komputer')) {
+            platform = 'GitHub';
+        } else if (prodi.toLowerCase().includes('ekonomi')) {
+            platform = 'ResearchGate';
+        }
+
+        // Variasi nomor telepon
+        const phonePrefixes = ['0812', '0813', '0815', '0852', '0853'];
+        const randomPrefix = phonePrefixes[Math.floor(Math.random() * phonePrefixes.length)];
+
+        const dummyData = {
+            detail_variasi: firstName,
+            detail_kota: alumni[i].kota || defaultKota,
+            detail_platform: platform,
+            detail_email: `${namaLower}@${emailDomain}`,
+            detail_phone: `${randomPrefix}${Math.floor(Math.random() * 90000000 + 10000000)}`,
+            detail_workplace: `${workplaceBase} ${firstName} ${prodi ? prodi.split(' ')[0] : 'Indonesia'}`,
+            detail_workplace_address: `Jl. ${firstName} No. ${Math.floor(Math.random() * 100) + 1}, ${alumni[i].kota || defaultKota}`,
+            detail_position: prodi.toLowerCase().includes('informatika') ? 'Developer' : prodi.toLowerCase().includes('ekonomi') ? 'Analyst' : 'Staff',
+            detail_employment_type: 'Swasta',
+            detail_social_media_platform: platform,
+            detail_social_media_url: platform === 'GitHub' ? `https://github.com/${namaLower}` : `https://linkedin.com/in/${namaLower}`,
+            detail_url: alumni[i].url || (platform === 'GitHub' ? `https://github.com/${namaLower}` : `https://linkedin.com/in/${namaLower}`)
+        };
+
+        // Isi field kosong dengan dummy
+        Object.entries(dummyData).forEach(([id, value]) => {
+            const input = document.getElementById(id);
+            if (input && !input.value) { // Hanya isi jika kosong
+                input.value = value;
+            }
+        });
+
+        if (filledCount > 0) {
+            alert('Data otomatis telah diisi. Field kosong dilengkapi dengan dummy cerdas. Silakan simpan perubahan jika sudah sesuai.');
+        } else {
+            alert('AI tidak menemukan data. Semua field diisi dengan dummy cerdas berdasarkan nama, prodi, dan fakultas. Silakan edit dan simpan perubahan.');
+        }
+    } catch (error) {
+        console.error('autoFillProfile error:', error);
+        alert('Gagal mengisi otomatis. Periksa koneksi dan coba lagi.');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-magic"></i> Isi Otomatis';
+        }
+    }
 }
 
 // ==========================================
@@ -279,6 +691,180 @@ function hapus(i) {
         alumni.splice(i, 1);
         saveData();
     }
+}
+
+function deleteDetailProfile(i) {
+    if (confirm("Apakah Anda yakin ingin menghapus data alumni ini?") ) {
+        alumni.splice(i, 1);
+        saveData();
+        document.getElementById('detailModal')?.remove();
+    }
+}
+
+// ==========================================
+// FUNGSI DETAIL PROFIL MODAL
+// ==========================================
+function showDetailProfile(i) {
+    const a = alumni[i];
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    modal.id = 'detailModal';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="sticky top-0 bg-gradient-to-r from-umm to-red-700 text-white p-6 flex justify-between items-start z-10">
+                <div>
+                    <h2 class="text-2xl font-bold">${a.nama || 'Profil Alumni'}</h2>
+                    <p class="text-red-100 text-sm mt-1">Lihat, edit, atau isi otomatis data profil.</p>
+                </div>
+                <button type="button" onclick="document.getElementById('detailModal').remove()" class="text-2xl hover:scale-110 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="px-6 pb-6 overflow-y-auto flex-1 min-h-0">
+                <form id="detailForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
+                        <input id="detail_nama" type="text" value="${a.nama || ''}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Variasi Nama</label>
+                        <input id="detail_variasi" type="text" value="${a.variasi || ''}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Program Studi</label>
+                        <input id="detail_prodi" type="text" value="${a.prodi || ''}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tahun Lulus</label>
+                        <input id="detail_tahun" type="number" value="${a.tahun || ''}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Kota</label>
+                        <input id="detail_kota" type="text" value="${a.kota || ''}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Platform Eksternal</label>
+                        <select id="detail_platform" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition cursor-pointer">
+                            <option value="">-- Pilih Platform --</option>
+                            <option value="LinkedIn" ${a.platform === 'LinkedIn' ? 'selected' : ''}>LinkedIn</option>
+                            <option value="Google Scholar" ${a.platform === 'Google Scholar' ? 'selected' : ''}>Google Scholar</option>
+                            <option value="ResearchGate" ${a.platform === 'ResearchGate' ? 'selected' : ''}>ResearchGate</option>
+                            <option value="ORCID" ${a.platform === 'ORCID' ? 'selected' : ''}>ORCID</option>
+                            <option value="GitHub" ${a.platform === 'GitHub' ? 'selected' : ''}>GitHub</option>
+                            <option value="Facebook" ${a.platform === 'Facebook' ? 'selected' : ''}>Facebook</option>
+                            <option value="Instagram" ${a.platform === 'Instagram' ? 'selected' : ''}>Instagram</option>
+                            <option value="Website Perusahaan" ${a.platform === 'Website Perusahaan' ? 'selected' : ''}>Website Perusahaan</option>
+                            <option value="Portal Berita" ${a.platform === 'Portal Berita' ? 'selected' : ''}>Portal Berita</option>
+                            <option value="Mesin Pencari Web" ${a.platform === 'Mesin Pencari Web' ? 'selected' : ''}>Mesin Pencari Web</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">URL Profil / Bukti</label>
+                        <input id="detail_url" type="url" value="${a.url || ''}" placeholder="https://..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sosial Media Tempat Bekerja</label>
+                        <select id="detail_social_media_platform" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition cursor-pointer">
+                            <option value="">-- Pilih Media Sosial --</option>
+                            <option value="LinkedIn" ${a.social_media_platform === 'LinkedIn' ? 'selected' : ''}>LinkedIn</option>
+                            <option value="Instagram" ${a.social_media_platform === 'Instagram' ? 'selected' : ''}>Instagram</option>
+                            <option value="Facebook" ${a.social_media_platform === 'Facebook' ? 'selected' : ''}>Facebook</option>
+                            <option value="TikTok" ${a.social_media_platform === 'TikTok' ? 'selected' : ''}>TikTok</option>
+                            <option value="Twitter" ${a.social_media_platform === 'Twitter' ? 'selected' : ''}>Twitter</option>
+                            <option value="YouTube" ${a.social_media_platform === 'YouTube' ? 'selected' : ''}>YouTube</option>
+                            <option value="Lainnya" ${a.social_media_platform === 'Lainnya' ? 'selected' : ''}>Lainnya</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">URL Media Sosial</label>
+                        <input id="detail_social_media_url" type="url" value="${a.social_media_url || ''}" placeholder="https://..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input id="detail_email" type="email" value="${a.email || ''}" placeholder="contoh@email.com" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">No HP</label>
+                        <input id="detail_phone" type="text" value="${a.phone || ''}" placeholder="08123456789" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tempat Bekerja</label>
+                        <input id="detail_workplace" type="text" value="${a.workplace || ''}" placeholder="PT Contoh" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Posisi</label>
+                        <input id="detail_position" type="text" value="${a.position || ''}" placeholder="Manager" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Pekerjaan</label>
+                        <select id="detail_employment_type" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition cursor-pointer">
+                            <option value="">-- Pilih Jenis --</option>
+                            <option value="PNS" ${a.employment_type === 'PNS' ? 'selected' : ''}>PNS</option>
+                            <option value="Swasta" ${a.employment_type === 'Swasta' ? 'selected' : ''}>Swasta</option>
+                            <option value="Wirausaha" ${a.employment_type === 'Wirausaha' ? 'selected' : ''}>Wirausaha</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Alamat Bekerja</label>
+                        <input id="detail_workplace_address" type="text" value="${a.workplace_address || ''}" placeholder="Jl. Contoh No.1" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                    </div>
+                </div>
+            </form>
+            </div>
+
+            <div class="bg-white p-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <button id="autoFillBtn" type="button" onclick="autoFillProfile(${i})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fas fa-magic"></i> Isi Otomatis
+                </button>
+                <button type="button" onclick="saveDetailProfile(${i})" class="w-full bg-umm hover:bg-umm-dark text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fas fa-save"></i> Simpan Perubahan
+                </button>
+                <button type="button" onclick="deleteDetailProfile(${i})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fas fa-trash-alt"></i> Hapus Data
+                </button>
+                <button type="button" onclick="document.getElementById('detailModal').remove()" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-xl font-semibold transition whitespace-nowrap">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function saveDetailProfile(i) {
+    const form = document.getElementById('detailForm');
+    if (!form) return;
+
+    alumni[i] = {
+        ...alumni[i],
+        nama: document.getElementById('detail_nama').value,
+        variasi: document.getElementById('detail_variasi').value,
+        prodi: document.getElementById('detail_prodi').value,
+        tahun: parseInt(document.getElementById('detail_tahun').value) || 0,
+        kota: document.getElementById('detail_kota').value,
+        platform: document.getElementById('detail_platform').value,
+        url: document.getElementById('detail_url').value,
+        social_media_platform: document.getElementById('detail_social_media_platform').value,
+        social_media_url: document.getElementById('detail_social_media_url').value,
+        email: document.getElementById('detail_email').value,
+        phone: document.getElementById('detail_phone').value,
+        workplace: document.getElementById('detail_workplace').value,
+        position: document.getElementById('detail_position').value,
+        employment_type: document.getElementById('detail_employment_type').value,
+        workplace_address: document.getElementById('detail_workplace_address').value
+    };
+
+    saveData();
+    render();
+    alert('Data berhasil disimpan.');
+    document.getElementById('detailModal')?.remove();
 }
 
 // ==========================================
@@ -379,7 +965,10 @@ function renderTable() {
                     <button onclick="lacakLokal(${i})" class="bg-teal-50 w-full text-teal-600 border border-teal-200 px-3 py-1.5 rounded-xl hover:bg-teal-600 hover:text-white transition-colors text-xs font-medium flex items-center justify-center gap-2 shadow-sm">
                         <i class="fas fa-microchip"></i> Lacak Lokal
                     </button>
-                    <button onclick="hapus(${i})" class="bg-red-50 w-full text-red-600 border border-red-200 px-3 py-1.5 rounded-xl hover:bg-red-600 hover:text-white transition-colors text-xs font-medium flex items-center justify-center gap-2 shadow-sm mt-1">
+                    <button onclick="showDetailProfile(${i})" class="bg-indigo-50 w-full text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-xl hover:bg-indigo-600 hover:text-white transition-colors text-xs font-medium flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fas fa-file-alt"></i> Detail
+                    </button>
+                    <button onclick="hapus(${i})" class="bg-red-50 w-full text-red-600 border border-red-200 px-3 py-1.5 rounded-xl hover:bg-red-600 hover:text-white transition-colors text-xs font-medium flex items-center justify-center gap-2 shadow-sm">
                         <i class="fas fa-trash-alt"></i> Hapus
                     </button>
                 </div>
@@ -489,7 +1078,6 @@ function updateDashboard() {
     document.getElementById("identified").innerText = identifiedCount;
     document.getElementById("verifyCount").innerText = verifyCount;
     
-    // UPDATE: Render angka Tidak Cocok ke Dashboard Card Baru
     const notMatchElement = document.getElementById("notMatchCount");
     if(notMatchElement) notMatchElement.innerText = tidakCocokCount;
 
@@ -587,6 +1175,81 @@ function updateDashboard() {
             }
         });
     }
+
+    // Grafik Volume - Distribusi berdasarkan tahun
+    const volumeCtx = document.getElementById('volumeChart');
+    if (volumeCtx) {
+        if (volumeChart !== null) {
+            volumeChart.destroy();
+        }
+
+        // Hitung distribusi berdasarkan tahun
+        const yearDistribution = {};
+        alumni.forEach(a => {
+            const year = a.tahun || 'Unknown';
+            yearDistribution[year] = (yearDistribution[year] || 0) + 1;
+        });
+
+        const years = Object.keys(yearDistribution).sort();
+        const counts = years.map(year => yearDistribution[year]);
+
+        volumeChart = new Chart(volumeCtx, {
+            type: 'bar',
+            data: {
+                labels: years,
+                datasets: [{
+                    label: 'Jumlah Alumni',
+                    data: counts,
+                    backgroundColor: 'rgba(177, 31, 36, 0.8)',
+                    borderColor: 'rgba(177, 31, 36, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    hoverBackgroundColor: 'rgba(177, 31, 36, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: { family: "'Poppins', sans-serif", size: 12 }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: { family: "'Poppins', sans-serif", size: 11 }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                        padding: 12,
+                        titleFont: { family: "'Poppins', sans-serif", size: 13, weight: '600' },
+                        bodyFont: { family: "'Poppins', sans-serif", size: 12 },
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.parsed.y} Alumni`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 // ==========================================
@@ -622,6 +1285,7 @@ function login() {
     const pass = document.getElementById("password").value;
 
     if (user === "admin" && pass === "umm123") {
+        localStorage.setItem("isLoggedIn", "true");
         document.getElementById("loginPage").classList.add("hidden");
         document.getElementById("app").classList.remove("hidden");
         showPage('dashboard');
@@ -633,6 +1297,7 @@ function login() {
 
 function logout() {
     if(confirm("Apakah Anda yakin ingin keluar dari sistem Tracking?")) {
+        localStorage.removeItem("isLoggedIn");
         document.getElementById("app").classList.add("hidden");
         document.getElementById("loginPage").classList.remove("hidden");
         
@@ -644,19 +1309,86 @@ function logout() {
 }
 
 function exportCSV() {
-    let csv = "Nama,Variasi,Prodi,Tahun,Kota,Platform,URL,Status,Score,Metode_Lacak,Alasan_Sistem\n";
+    console.log("Export CSV clicked, alumni length:", alumni.length);
+
+    if (alumni.length === 0) {
+        alert("Tidak ada data alumni untuk diekspor. Silakan load data terlebih dahulu.");
+        return;
+    }
+
+    // Hitung data yang lengkap vs tidak lengkap
+    let completeData = 0;
+    let incompleteData = 0;
+
+    alumni.forEach(a => {
+        const requiredFields = [a.nama, a.prodi, a.tahun];
+        const hasBasicInfo = requiredFields.every(field => field && field.toString().trim() !== "");
+
+        if (hasBasicInfo) {
+            completeData++;
+        } else {
+            incompleteData++;
+        }
+    });
+
+    console.log("Generating CSV content...");
+
+    let csv = "NIM,Nama,Variasi,Prodi,Tahun,Kota,Platform,URL,Email,Phone,Workplace,Workplace_Address,Position,Employment_Type,Workplace_Social_Media,Social_Media_Platform,Social_Media_URL,LinkedIn,IG,FB,TikTok,Status,Score,Metode_Lacak,Alasan_Sistem\n";
     alumni.forEach(a => {
         let safeAlasan = a.alasan_ai ? a.alasan_ai.replace(/,/g, ";").replace(/\n/g, " ") : "";
         let metode = a.metode_lacak ? a.metode_lacak : "-";
-        csv += `${a.nama},${a.variasi},${a.prodi},${a.tahun},${a.kota},${a.platform},${a.url},${a.status},${a.score},${metode},"${safeAlasan}"\n`;
+        csv += `${a.nim || ""},${a.nama},${a.variasi},${a.prodi},${a.tahun},${a.kota},${a.platform},${a.url},${a.email},${a.phone},${a.workplace},${a.workplace_address},${a.position},${a.employment_type},${a.workplace_social_media},${a.social_media_platform || ""},${a.social_media_url || ""},${a.social_media.linkedin},${a.social_media.ig},${a.social_media.fb},${a.social_media.tiktok},${a.status},${a.score},${metode},"${safeAlasan}"\n`;
     });
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "umm_alumni_data_hybrid.csv";
-    a.click();
+    console.log("CSV content length:", csv.length);
+
+    try {
+        // Coba metode alternatif untuk download
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = window.URL.createObjectURL(blob);
+
+        // Metode 1: Direct download dengan anchor
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "umm_alumni_data_hybrid.csv";
+        a.style.display = "none";
+
+        // Pastikan anchor ditambahkan ke DOM
+        document.body.appendChild(a);
+
+        // Trigger download
+        setTimeout(() => {
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            console.log("Download triggered successfully");
+            alert(`Berhasil mengekspor ${alumni.length} data alumni ke CSV.\nData lengkap: ${completeData}\nData perlu dilengkapi: ${incompleteData}`);
+        }, 100);
+
+    } catch (error) {
+        console.error("Error with anchor method:", error);
+
+        try {
+            // Metode 2: Fallback dengan window.open
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            window.URL.revokeObjectURL(url);
+            alert(`File CSV dibuka di tab baru (${alumni.length} data).\nData lengkap: ${completeData}, Perlu dilengkapi: ${incompleteData}\nSilakan save as dengan nama "umm_alumni_data_hybrid.csv".`);
+        } catch (fallbackError) {
+            console.error("Error with fallback method:", fallbackError);
+            alert(`Tidak dapat mengekspor CSV otomatis.\nData lengkap: ${completeData}, Perlu dilengkapi: ${incompleteData}\n\nSilakan copy data berikut dan save sebagai file CSV:\n\n${csv.substring(0, 1000)}...`);
+        }
+    }
 }
 
-document.addEventListener("DOMContentLoaded", render);
+document.addEventListener("DOMContentLoaded", () => {
+    if (localStorage.getItem("isLoggedIn") === "true") {
+        document.getElementById("loginPage").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        showPage('dashboard');
+    }
+    updateSliderValue(); // Inisialisasi nilai slider dashboard
+    updateSidebarSliderValue(); // Inisialisasi nilai slider sidebar
+    render();
+});

@@ -35,6 +35,31 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Custom slider styling */
+        .slider-thumb::-webkit-slider-thumb {
+            appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #b11f24;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .slider-thumb::-webkit-slider-thumb:hover {
+            background: #8b181c;
+            transform: scale(1.1);
+        }
+        .slider-thumb::-moz-range-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #b11f24;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-hidden">
@@ -94,10 +119,29 @@
                 </li>
             </ul>
             
-            <div class="p-4 border-t border-gray-700 space-y-2">
+            <div class="p-4 border-t border-gray-700 space-y-4">
+                <!-- Load Data Control -->
+                <div class="bg-gray-800 rounded-lg p-3 border border-gray-600">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs text-gray-400 font-medium">Load Data Alumni</label>
+                        <span id="sidebarSliderValue" class="text-xs font-bold text-umm">10</span>
+                    </div>
+                    <input id="sidebarDataLimit" type="range" min="5" max="500" value="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb" oninput="updateSidebarSliderValue()">
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>5</span>
+                        <span id="sidebarLoadButton" onclick="loadDataFromSpreadsheet(parseInt(document.getElementById('sidebarDataLimit').value))" class="flex items-center gap-2 px-3 py-1 bg-umm hover:bg-red-700 text-white rounded-md transition cursor-pointer text-xs">
+                            <i class="fas fa-cloud-download-alt"></i> Load
+                        </span>
+                        <span>500</span>
+                    </div>
+                </div>
+
+                <!-- Export CSV -->
                 <button onclick="exportCSV()" class="w-full flex items-center justify-center gap-2 border border-gray-600 hover:bg-gray-700 text-sm py-3 rounded-xl transition text-gray-300 hover:text-white">
                     <i class="fas fa-file-export"></i> Export CSV
                 </button>
+
+                <!-- Logout -->
                 <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-sm py-3 rounded-xl transition text-white shadow-sm border border-red-700">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
@@ -152,6 +196,26 @@
                                 <span class="text-xs text-gray-500 font-medium uppercase tracking-wide truncate block">Tidak Cocok</span>
                                 <h3 id="notMatchCount" class="text-2xl font-bold text-gray-800 mt-0.5">0</h3>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="font-bold text-gray-800 text-lg">Grafik Volume Data Alumni</h3>
+                                <p class="text-xs text-gray-500">Distribusi jumlah alumni berdasarkan tahun lulus.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm text-gray-600">Load Data:</label>
+                                <input id="dataLimitSlider" type="range" min="5" max="500" value="10" class="w-24" oninput="updateSliderValue()">
+                                <span id="sliderValue" class="text-sm font-bold text-umm min-w-[2rem]">10</span>
+                                <button onclick="loadDataFromSpreadsheet(parseInt(document.getElementById('dataLimitSlider').value))" class="px-4 py-2 bg-umm text-white rounded-lg hover:bg-red-700 transition text-sm">
+                                    <i class="fas fa-cloud-download-alt mr-2"></i>Load
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full flex items-center justify-center relative min-h-[300px]">
+                            <canvas id="volumeChart"></canvas>
                         </div>
                     </div>
 
@@ -223,6 +287,52 @@
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">URL Bukti / Profil Eksternal</label>
                                     <input id="urlProfil" type="url" placeholder="https://..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Sosial Media Tempat Bekerja</label>
+                                    <select id="socialMediaPlatform" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition cursor-pointer">
+                                        <option value="">-- Pilih Media Sosial --</option>
+                                        <option value="LinkedIn">LinkedIn</option>
+                                        <option value="Instagram">Instagram</option>
+                                        <option value="Facebook">Facebook</option>
+                                        <option value="TikTok">TikTok</option>
+                                        <option value="Twitter">Twitter</option>
+                                        <option value="YouTube">YouTube</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">URL Media Sosial</label>
+                                    <input id="socialMediaUrl" type="url" placeholder="https://..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                    <input id="email" type="email" placeholder="contoh@email.com" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">No HP</label>
+                                    <input id="phone" placeholder="08123456789" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Tempat Bekerja</label>
+                                    <input id="workplace" placeholder="PT Contoh" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Alamat Bekerja</label>
+                                    <input id="workplace_address" placeholder="Jl. Contoh No.1" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Posisi</label>
+                                    <input id="position" placeholder="Manager" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Pekerjaan</label>
+                                    <select id="employment_type" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition cursor-pointer">
+                                        <option value="">-- Pilih Jenis --</option>
+                                        <option value="PNS">PNS</option>
+                                        <option value="Swasta">Swasta</option>
+                                        <option value="Wirausaha">Wirausaha</option>
+                                    </select>
                                 </div>
                             </div>
                             <button type="submit" class="bg-umm hover:bg-umm-dark text-white px-8 py-3 rounded-xl font-medium shadow-md transition transform hover:-translate-y-0.5">
