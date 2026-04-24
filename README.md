@@ -1,7 +1,6 @@
 
 ---
 
-```markdown
 # 🎓 UMM Alumni Trace (Sistem Pelacakan Alumni Hibrida)
 
 Sistem Pelacakan Alumni cerdas berbasis web yang dirancang untuk menemukan, memvalidasi, dan mengelola rekam jejak alumni Universitas Muhammadiyah Malang (UMM) menggunakan pendekatan Hibrida (Algoritma Pakar Lokal dan Gemini Flash AI).
