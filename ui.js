@@ -41,7 +41,7 @@ function showLoadingProgress(message, opts = {}) {
         progressDiv.id = 'loadingProgress';
         progressDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         progressDiv.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm mx-4 text-center w-full relative overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-xl p-8 max-w-[90%] sm:max-w-sm mx-auto text-center relative overflow-hidden">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-umm mx-auto mb-4"></div>
                 <p class="text-gray-700 font-medium mb-4" id="loadingMessage">${message}</p>
                 <div id="loadingButtons" class="hidden flex-col gap-2 mt-4"></div>
@@ -98,6 +98,7 @@ function getBadgeClass(status) {
     if(status === "Teridentifikasi") return "bg-emerald-100 text-emerald-700 border-emerald-200";
     if(status === "Perlu Verifikasi") return "bg-yellow-100 text-yellow-700 border-yellow-200";
     if(status === "Tidak Cocok") return "bg-red-100 text-red-700 border-red-200";
+    if(status === "Sudah Diekstrak") return "bg-sky-100 text-sky-700 border-sky-200";
     if(status === "Menganalisis...") return "bg-blue-100 text-blue-700 border-blue-200 animate-pulse";
     return "bg-gray-100 text-gray-600 border-gray-200";
 }
@@ -109,19 +110,67 @@ function render() {
 }
 
 // --- PAGINASI PUSAT TRACKING ---
+function applyFilterSort() {
+    currentPageTable = 1;
+    renderTable();
+}
+
 function renderTable() {
     const tableBody = document.getElementById("table");
     if (!tableBody) return;
-    const totalPages = Math.ceil(alumni.length / rowsPerPageTable) || 1;
+
+    let filterStatus = 'Semua';
+    let sortBy = 'Terbaru';
+    let searchQuery = '';
+    const filterEl = document.getElementById('filterStatus');
+    const sortEl = document.getElementById('sortBy');
+    const searchEl = document.getElementById('searchTracking');
+    
+    if (filterEl) filterStatus = filterEl.value;
+    if (sortEl) sortBy = sortEl.value;
+    if (searchEl) searchQuery = searchEl.value.toLowerCase().trim();
+
+    let filteredAlumni = alumni.map((a, index) => ({ ...a, originalIndex: index }));
+    
+    if (searchQuery !== '') {
+        filteredAlumni = filteredAlumni.filter(a => 
+            (a.nama && String(a.nama).toLowerCase().includes(searchQuery)) ||
+            (a.nim && String(a.nim).toLowerCase().includes(searchQuery)) ||
+            (a.prodi && String(a.prodi).toLowerCase().includes(searchQuery))
+        );
+    }
+    
+    if (filterStatus !== 'Semua') {
+        filteredAlumni = filteredAlumni.filter(a => {
+            if (filterStatus === 'Belum Dilacak') return !a.status || a.status === 'Belum Dilacak' || a.status === 'Menganalisis...' || a.status === 'Sudah Diekstrak';
+            return a.status === filterStatus;
+        });
+    }
+
+    if (sortBy === 'Skor Tertinggi') {
+        filteredAlumni.sort((a, b) => (b.score || 0) - (a.score || 0));
+    } else if (sortBy === 'Skor Terendah') {
+        filteredAlumni.sort((a, b) => (a.score || 0) - (b.score || 0));
+    } else if (sortBy === 'Nama A-Z') {
+        filteredAlumni.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+    } else {
+        // Default order (by original array index)
+        filteredAlumni.sort((a, b) => a.originalIndex - b.originalIndex);
+    }
+
+    const totalPages = Math.ceil(filteredAlumni.length / rowsPerPageTable) || 1;
     if (currentPageTable > totalPages) currentPageTable = totalPages;
     if (currentPageTable < 1) currentPageTable = 1;
 
     const start = (currentPageTable - 1) * rowsPerPageTable;
-    const paginatedData = alumni.slice(start, start + rowsPerPageTable);
+    const paginatedData = filteredAlumni.slice(start, start + rowsPerPageTable);
     const rowsHtml = []; 
+    
+    const countEl = document.getElementById('trackingDataCount');
+    if (countEl) countEl.innerText = `Menampilkan ${filteredAlumni.length} data`;
 
-    paginatedData.forEach((a, indexInPage) => {
-        const i = start + indexInPage; 
+    paginatedData.forEach((a) => {
+        const i = a.originalIndex; 
         
         let alertColor = "border-gray-200 text-gray-600 bg-gray-50";
         let iconStatusAlert = "fa-info-circle text-gray-400";
@@ -132,7 +181,8 @@ function renderTable() {
         else if (a.status === "Tidak Cocok") { alertColor = "border-red-200 text-red-700 bg-red-50"; iconStatusAlert = "fa-times-circle text-red-500"; borderLeftColor = "border-l-red-500"; }
         else if (a.status === "Menganalisis...") { alertColor = "border-blue-200 text-blue-700 bg-blue-50 animate-pulse"; iconStatusAlert = "fa-spinner fa-spin text-blue-500"; borderLeftColor = "border-l-blue-400"; }
 
-        let labelAnalisis = a.metode_lacak === "Lokal" ? "Analisis Sistem" : "Analisis AI";
+        let labelAnalisis = a.metode_lacak ? a.metode_lacak : "Analisis AI";
+        if (a.metode_lacak === "Lokal") labelAnalisis = "Analisis Sistem";
         let iconAnalisis = a.metode_lacak === "Lokal" ? "fa-microchip" : "fa-robot";
         if (a.alasan_ai && a.alasan_ai.includes("[Verifikasi Admin]")) {
             labelAnalisis = "Verifikasi Manual";
@@ -143,13 +193,23 @@ function renderTable() {
         <tr class="bg-white shadow-sm hover:shadow-md transition-shadow group relative">
             <td class="p-5 rounded-l-2xl border-y border-l-4 border-gray-100 align-top ${borderLeftColor}">
                 <div class="font-bold text-gray-800 text-base mb-1">${a.nama}</div>
-                <div class="text-[11px] text-gray-500 mb-1.5 font-medium"><i class="fas fa-id-badge text-gray-400 mr-1"></i> Alias: ${a.variasi || '-'}</div>
-                <div class="text-xs text-gray-500 mb-2 mt-1">
-                    <span class="inline-flex items-center gap-1"><i class="fas fa-graduation-cap"></i> ${a.prodi}</span>
-                    <span class="mx-1.5 text-gray-300">•</span>
-                    <span class="inline-flex items-center gap-1"><i class="fas fa-map-marker-alt"></i> ${a.kota}</span>
+                <div class="text-[11px] text-gray-500 mb-1.5 font-medium">
+                    ${a.variasi ? `<i class="fas fa-id-badge text-gray-400 mr-1"></i> Alias: ${a.variasi} <span class="mx-1.5 text-gray-300">|</span> ` : ''}NIM: <span class="font-mono ml-0.5">${a.nim || '-'}</span>
                 </div>
-                ${a.alasan_ai ? `<div class="mt-3 text-xs p-3 rounded-xl border flex items-start gap-2.5 ${alertColor}"><i class="fas ${iconStatusAlert} mt-0.5 text-sm"></i><div class="leading-relaxed"><b><i class="fas ${iconAnalisis} mr-1"></i> ${labelAnalisis}:</b> ${a.alasan_ai}</div></div>` : ''}
+                <div class="text-xs text-gray-500 mb-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                    <span class="inline-flex items-center gap-1"><i class="fas fa-graduation-cap"></i> ${a.prodi}</span>
+                    <span class="inline-flex items-center gap-1"><i class="fas fa-map-marker-alt"></i> ${a.kota || '-'}</span>
+                </div>
+                ${a.workplace ? `<div class="text-xs text-gray-600 mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                    <span class="inline-flex items-center gap-1 font-medium"><i class="fas fa-building text-indigo-400"></i> ${a.workplace}</span>
+                    ${a.position ? `<span class="inline-flex items-center gap-1"><i class="fas fa-user-tie text-emerald-400"></i> ${a.position}</span>` : ''}
+                    ${a.employment_type ? `<span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${a.employment_type==='PNS'?'bg-blue-50 text-blue-600':a.employment_type==='Wirausaha'?'bg-orange-50 text-orange-600':'bg-gray-50 text-gray-500'}">${a.employment_type}</span>` : ''}
+                </div>` : ''}
+                ${(a.email || a.phone) ? `<div class="text-[11px] text-gray-400 mt-1 flex flex-wrap gap-x-3">
+                    ${a.email ? `<span class="inline-flex items-center gap-1"><i class="fas fa-envelope"></i> ${a.email}</span>` : ''}
+                    ${a.phone ? `<span class="inline-flex items-center gap-1"><i class="fas fa-phone"></i> ${a.phone}</span>` : ''}
+                </div>` : ''}
+                ${a.alasan_ai ? `<div class="mt-2 text-xs p-2.5 rounded-xl border flex items-start gap-2 ${alertColor}"><i class="fas ${iconStatusAlert} mt-0.5 text-sm"></i><div class="leading-relaxed"><b><i class="fas ${iconAnalisis} mr-1"></i> ${labelAnalisis}:</b> ${a.alasan_ai}</div></div>` : ''}
             </td>
             <td class="p-5 border-y border-gray-100 text-center align-middle">${getPlatformIcon(a.platform, a.url)}</td>
             <td class="p-5 border-y border-gray-100 text-center align-middle"><span class="inline-block whitespace-nowrap px-4 py-1.5 text-xs font-semibold rounded-full border shadow-sm ${getBadgeClass(a.status)}">${a.status}</span></td>
@@ -163,6 +223,7 @@ function renderTable() {
                 </div>
             </td>
         </tr>`);
+
     });
 
     tableBody.innerHTML = rowsHtml.join("");
@@ -453,11 +514,82 @@ function updateDashboard() {
     const identifiedCount = alumni.filter(a => a.status === "Teridentifikasi").length;
     const verifyCount = alumni.filter(a => a.status === "Perlu Verifikasi").length;
     const tidakCocokCount = alumni.filter(a => a.status === "Tidak Cocok").length;
-    const belumDilacakCount = alumni.filter(a => a.status === "Belum Dilacak" || a.status === "Menganalisis...").length;
+    const belumDilacakCount = alumni.filter(a => !a.status || a.status === "Belum Dilacak" || a.status === "Menganalisis..." || a.status === "Sudah Diekstrak").length;
 
     document.getElementById("identified").innerText = identifiedCount;
     document.getElementById("verifyCount").innerText = verifyCount;
     if(document.getElementById("notMatchCount")) document.getElementById("notMatchCount").innerText = tidakCocokCount;
+
+    // --- KALKULASI METRIK PENILAIAN ---
+    const totalTracked = identifiedCount + verifyCount;
+    
+    // 1. Coverage (40%)
+    let coverageScore = 0;
+    if (totalTracked === 0) coverageScore = 0;
+    else if (totalTracked < 28459) coverageScore = 40;
+    else if (totalTracked <= 56917) coverageScore = 60;
+    else if (totalTracked <= 85376) coverageScore = 80;
+    else if (totalTracked <= 106720) coverageScore = 90;
+    else coverageScore = 100;
+
+    // 2. Accuracy (40%)
+    const accuracyCount = identifiedCount;
+    let accuracyScore = 0;
+    if (accuracyCount === 0) accuracyScore = 0;
+    else if (accuracyCount < 350) accuracyScore = 50;
+    else if (accuracyCount <= 425) accuracyScore = 75;
+    else if (accuracyCount <= 475) accuracyScore = 90;
+    else accuracyScore = 100;
+
+    // 3. Completeness (20%)
+    let completenessScore = 0;
+    let totalFilledFields = 0;
+    if (totalTracked > 0) {
+        alumni.forEach(a => {
+            if (a.status === "Teridentifikasi" || a.status === "Perlu Verifikasi") {
+                let filled = 0;
+                if (a.workplace && a.workplace.trim() !== '') filled++;
+                if (a.position && a.position.trim() !== '') filled++;
+                if (a.email && a.email.trim() !== '') filled++;
+                if (a.url && a.url.trim() !== '') filled++;
+                totalFilledFields += filled;
+            }
+        });
+        const avgFilled = totalFilledFields / totalTracked;
+        if (avgFilled < 2) completenessScore = 50;
+        else if (avgFilled < 3) completenessScore = 70;
+        else if (avgFilled < 4) completenessScore = 85;
+        else completenessScore = 100;
+    }
+
+    // Format angka
+    const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const avgFieldFormatted = totalTracked > 0 ? (totalFilledFields / totalTracked).toFixed(2) : "0.00";
+
+    const totalFinalScore = Math.round((coverageScore * 0.4) + (accuracyScore * 0.4) + (completenessScore * 0.2));
+
+    // Update DOM Penilaian (Reverted to Gauge + Bars)
+    if (document.getElementById('totalScore')) document.getElementById('totalScore').innerText = totalFinalScore;
+    if (document.getElementById('coverageScoreTxt')) document.getElementById('coverageScoreTxt').innerText = coverageScore;
+    if (document.getElementById('coverageBar')) document.getElementById('coverageBar').style.width = `${coverageScore}%`;
+    if (document.getElementById('accuracyScoreTxt')) document.getElementById('accuracyScoreTxt').innerText = accuracyScore;
+    if (document.getElementById('accuracyBar')) document.getElementById('accuracyBar').style.width = `${accuracyScore}%`;
+    if (document.getElementById('completenessScoreTxt')) document.getElementById('completenessScoreTxt').innerText = completenessScore;
+    if (document.getElementById('completenessBar')) document.getElementById('completenessBar').style.width = `${completenessScore}%`;
+
+    // Update Descriptions (Keep custom ones)
+    if (document.getElementById('coverageDesc')) document.getElementById('coverageDesc').innerText = `${formatNumber(totalTracked)} dari ${formatNumber(alumni.length || 142292)} data ditemukan.`;
+    if (document.getElementById('accuracyDesc')) document.getElementById('accuracyDesc').innerText = `${formatNumber(accuracyCount)} data valid dari sampling 500 data.`;
+    if (document.getElementById('completenessDesc')) document.getElementById('completenessDesc').innerText = `Rata-rata field terisi: ${avgFieldFormatted} dari 4 field utama.`;
+
+    const scoreCircle = document.getElementById('scoreCircle');
+    if (scoreCircle) {
+        scoreCircle.style.strokeDasharray = `${totalFinalScore}, 100`;
+        scoreCircle.setAttribute('class', totalFinalScore < 50 ? 'text-red-500 transition-all duration-1500 ease-out' 
+                                       : totalFinalScore < 75 ? 'text-yellow-500 transition-all duration-1500 ease-out' 
+                                       : 'text-indigo-600 transition-all duration-1500 ease-out');
+    }
+
 
     // Update History List
     const historyList = document.getElementById("historyList");
@@ -472,6 +604,7 @@ function updateDashboard() {
                 if(item.status === "Teridentifikasi") dotColor = "bg-emerald-500";
                 if(item.status === "Perlu Verifikasi") dotColor = "bg-yellow-400";
                 if(item.status === "Tidak Cocok") dotColor = "bg-red-500";
+                if(item.status === "Sudah Diekstrak") dotColor = "bg-sky-500";
                 if(item.status === "Menganalisis...") dotColor = "bg-blue-500 animate-pulse";
                 historyHtml.push(`
                 <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
@@ -572,11 +705,28 @@ function login() {
         document.getElementById("loginPage").classList.add("hidden");
         document.getElementById("app").classList.remove("hidden");
         showPage('dashboard');
+        // Auto-load CSV jika data alumni masih kosong setelah login
+        if (alumni.length === 0) {
+            loadDefaultCSV(true, true);
+        } else {
+            // Jika data sudah ada tapi belum dilacak, langsung auto track
+            setTimeout(() => {
+                autoAnalisisLengkap(true);
+            }, 500);
+        }
     } else document.getElementById("loginError").classList.remove("hidden");
 }
-function logout() {
-    if(confirm("Apakah Anda yakin ingin keluar?")) {
-        localStorage.removeItem("isLoggedIn"); location.reload();
+async function logout() {
+    const isConfirmed = await showCustomConfirm(
+        "Konfirmasi Keluar",
+        "Apakah Anda yakin ingin keluar dari sistem?\nAnda harus login kembali untuk mengakses data pelacakan.",
+        { bgClass: "bg-red-50", textClass: "text-red-600", iconClass: "fas fa-sign-out-alt" },
+        "bg-red-600 hover:bg-red-700", "Ya, Keluar"
+    );
+    
+    if (isConfirmed) {
+        localStorage.removeItem("isLoggedIn"); 
+        location.reload();
     }
 }
 
@@ -606,6 +756,7 @@ function showDetailProfile(i) {
             </div>
             
             <div class="px-6 md:px-8 pb-8 overflow-y-auto flex-1 min-h-0 mt-6">
+
                 <form id="detailForm" class="space-y-8">
                     <!-- Identitas -->
                     <div>
@@ -628,15 +779,8 @@ function showDetailProfile(i) {
                                 <select id="detail_platform" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all cursor-pointer">
                                 <option value="" ${!a.platform ? 'selected' : ''}>-- Pilih Platform --</option>
                                 <option value="LinkedIn" ${a.platform === 'LinkedIn' ? 'selected' : ''}>LinkedIn</option>
-                                <option value="Google Scholar" ${a.platform === 'Google Scholar' ? 'selected' : ''}>Google Scholar</option>
-                                <option value="ResearchGate" ${a.platform === 'ResearchGate' ? 'selected' : ''}>ResearchGate</option>
-                                <option value="ORCID" ${a.platform === 'ORCID' ? 'selected' : ''}>ORCID</option>
-                                <option value="GitHub" ${a.platform === 'GitHub' ? 'selected' : ''}>GitHub</option>
-                                <option value="Facebook" ${a.platform === 'Facebook' ? 'selected' : ''}>Facebook</option>
                                 <option value="Instagram" ${a.platform === 'Instagram' ? 'selected' : ''}>Instagram</option>
-                                <option value="Website Perusahaan" ${a.platform === 'Website Perusahaan' ? 'selected' : ''}>Website Perusahaan</option>
-                                <option value="Portal Berita" ${a.platform === 'Portal Berita' ? 'selected' : ''}>Portal Berita</option>
-                                <option value="Mesin Pencari Web" ${a.platform === 'Mesin Pencari Web' ? 'selected' : ''}>Mesin Pencari Web</option>
+                                <option value="Facebook" ${a.platform === 'Facebook' ? 'selected' : ''}>Facebook</option>
                             </select>
                             </div>
                             <div class="md:col-span-2">
@@ -678,10 +822,6 @@ function showDetailProfile(i) {
                                 <option value="LinkedIn" ${a.social_media_platform === 'LinkedIn' ? 'selected' : ''}>LinkedIn</option>
                                 <option value="Instagram" ${a.social_media_platform === 'Instagram' ? 'selected' : ''}>Instagram</option>
                                 <option value="Facebook" ${a.social_media_platform === 'Facebook' ? 'selected' : ''}>Facebook</option>
-                                <option value="TikTok" ${a.social_media_platform === 'TikTok' ? 'selected' : ''}>TikTok</option>
-                                <option value="Twitter" ${a.social_media_platform === 'Twitter' ? 'selected' : ''}>Twitter</option>
-                                <option value="YouTube" ${a.social_media_platform === 'YouTube' ? 'selected' : ''}>YouTube</option>
-                                <option value="Lainnya" ${a.social_media_platform === 'Lainnya' ? 'selected' : ''}>Lainnya</option>
                                 </select>
                             </div>
                             <div class="relative"><label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">URL Media Sosial</label><div class="relative"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-link text-gray-400"></i></div><input id="detail_social_media_url" type="url" value="${a.social_media_url || ''}" placeholder="https://..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition-all"></div></div>
@@ -780,6 +920,68 @@ function showCustomConfirm(title, message, iconHtml, confirmBtnClass, confirmTex
         document.getElementById('btnCancelConfirm').onclick = () => closeModal(false);
         document.getElementById('btnOkConfirm').onclick = () => closeModal(true);
     });
+}
+
+function showExportSuccessAnimation(count) {
+    const modalId = 'exportSuccessAnim';
+    if (document.getElementById(modalId)) document.getElementById(modalId).remove();
+
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'fixed inset-0 z-[200] flex items-center justify-center pointer-events-none';
+    
+    modal.innerHTML = `
+        <div id="exportAnimBox" class="bg-gradient-to-br from-emerald-500 to-green-500 rounded-full w-0 h-0 flex items-center justify-center text-white overflow-hidden shadow-2xl transition-all duration-700 ease-in-out opacity-0 translate-y-10">
+            <div id="exportAnimContent" class="flex flex-col items-center justify-center opacity-0 transition-opacity duration-300 min-w-[250px] p-4 text-center">
+                <i class="fas fa-file-csv text-5xl mb-3 drop-shadow-md"></i>
+                <h3 class="font-bold text-2xl tracking-tight mb-1">Berhasil!</h3>
+                <p class="text-sm text-green-50 font-medium">${count} data telah diekspor ke CSV.</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const box = document.getElementById('exportAnimBox');
+    const content = document.getElementById('exportAnimContent');
+    
+    setTimeout(() => {
+        // 1. Muncul bulat kecil
+        box.classList.remove('w-0', 'h-0', 'opacity-0', 'translate-y-10');
+        box.classList.add('w-24', 'h-24');
+        
+        setTimeout(() => {
+            // 2. Membesar jadi kotak
+            box.classList.remove('rounded-full', 'w-24', 'h-24');
+            box.classList.add('rounded-[2rem]', 'w-80', 'h-48');
+            
+            setTimeout(() => {
+                // Tampilkan konten
+                content.classList.remove('opacity-0');
+                
+                setTimeout(() => {
+                    // 3. Sembunyikan konten
+                    content.classList.add('opacity-0');
+                    
+                    setTimeout(() => {
+                        // Kembali ke bulat
+                        box.classList.remove('rounded-[2rem]', 'w-80', 'h-48');
+                        box.classList.add('rounded-full', 'w-24', 'h-24');
+                        
+                        setTimeout(() => {
+                            // 4. Terlempar ke atas
+                            box.style.transform = 'translateY(-150vh) scale(0.5)';
+                            box.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                modal.remove();
+                            }, 700);
+                        }, 500);
+                    }, 300);
+                }, 2000); // Waktu baca pesan (2 detik)
+            }, 600); // Transisi bentuk ke kotak
+        }, 600); // Waktu hold bulat awal
+    }, 50);
 }
 
 function showAIOptionsModal(totalData) {

@@ -35,8 +35,9 @@ async function loadDataFromDB() {
     });
 }
 
-function saveData() {
-    if (typeof render === 'function') render(); // Panggil fungsi UI jika ada
+// Simpan ke IndexedDB (untuk perubahan kecil seperti edit/hapus/verifikasi 1 data)
+function saveData(doRender = true) {
+    if (doRender && typeof render === 'function') render();
 
     if (!db) {
         console.warn("Database belum siap, data tidak dapat disimpan permanen.");
@@ -47,4 +48,25 @@ function saveData() {
     store.put({ id: "alumni_data", data: alumni }).onerror = function(e) {
         console.error("Gagal menyimpan ke IndexedDB:", e.target.error);
     };
+}
+
+// Simpan ke IndexedDB secara BACKGROUND — tidak membekukan UI
+// Dipakai setelah load CSV massal agar UI tetap responsif
+function saveToDatabaseBackground() {
+    if (!db) {
+        console.warn("Database belum siap untuk penyimpanan background.");
+        return;
+    }
+    // Tunda 100ms agar browser sempat render UI terlebih dahulu
+    setTimeout(() => {
+        const transaction = db.transaction(["storage"], "readwrite");
+        const store = transaction.objectStore("storage");
+        const request = store.put({ id: "alumni_data", data: alumni });
+        request.onsuccess = () => {
+            console.log(`[DB] ${alumni.length} data alumni berhasil disimpan ke IndexedDB.`);
+        };
+        request.onerror = (e) => {
+            console.error("Gagal menyimpan background ke IndexedDB:", e.target.error);
+        };
+    }, 100);
 }

@@ -1,13 +1,29 @@
 
+// Flag untuk mencegah pemuatan CSV ganda secara bersamaan
+let isCSVLoading = false;
+
 // ==========================================
 // FUNGSI UNTUK MEMUAT DATA DARI FILE CSV SECARA LANGSUNG
 // ==========================================
-async function loadDefaultCSV() {
+async function loadDefaultCSV(silent = false, autoTrack = false) {
+    // Cegah pemanggilan ganda / bersamaan
+    if (isCSVLoading) {
+        console.warn("[CSV] Load sudah berjalan, permintaan duplikat diabaikan.");
+        return;
+    }
+    isCSVLoading = true;
+
     const fileName = "Alumni 2000-2025.xlsx - Sheet1.csv";
     showLoadingProgress(`Mempersiapkan untuk memuat file ${fileName}...`);
 
+    // Saat auto-load: kosongkan data lama dulu agar tidak terjadi tumpukan
+    if (silent) {
+        alumni = [];
+    }
+
     if (window.Worker) {
         const csvWorker = new Worker('csv-worker.js');
+        // Kirim NIM yang sudah ada untuk deduplikasi (hanya relevan saat load manual)
         const existingAlumniNIMs = alumni.map(a => a.nim).filter(Boolean);
         const existingAlumniNames = alumni.map(a => a.nama);
 
@@ -18,28 +34,51 @@ async function loadDefaultCSV() {
             existingAlumniNames: existingAlumniNames
         });
 
-        csvWorker.onmessage = function(e) {
-            const { type, message, processed, total, newAlumni, successCount, totalRows } = e.data;
+        csvWorker.onmessage = async function(e) {
+            const { type, message, batch, processed, total, successCount, totalRows } = e.data;
 
-            if (type === 'progress') {
-                showLoadingProgress(`Memproses ${processed} dari ${total} data...`);
+            if (type === 'batch') {
+                // Terima data per 5000 baris — tidak freeze karena bertahap
+                alumni.push(...batch);
+                showLoadingProgress(`Memuat data: ${processed.toLocaleString()} dari ${total.toLocaleString()} baris...`);
             } else if (type === 'done') {
-                alumni.push(...newAlumni);
-                try { saveData(); } 
-                catch(err) { alert("Terjadi error saat menyimpan data."); }
-                
+                isCSVLoading = false;
                 hideLoadingProgress();
-                alert(`Data berhasil dimuat dari ${fileName}!\nTotal: ${totalRows} baris\nBaru ditambah: ${successCount} data`);
+                render();
+                if (!silent) {
+                    showCustomAlert(
+                        "Data Berhasil Dimuat!",
+                        `Total baris: ${totalRows.toLocaleString()}\nData berhasil dimuat: ${successCount.toLocaleString()} alumni`,
+                        { bgClass: "bg-emerald-50", textClass: "text-emerald-600", iconClass: "fas fa-check-circle" }
+                    );
+                }
                 csvWorker.terminate();
+                // Simpan ke IndexedDB di background — tidak block UI
+                saveToDatabaseBackground();
+
+                if (autoTrack) {
+                    // Beri jeda kecil agar UI sembuh dari render
+                    setTimeout(() => {
+                        autoAnalisisLengkap(true);
+                    }, 500);
+                }
             } else if (type === 'error') {
+                isCSVLoading = false;
                 hideLoadingProgress();
-                alert(`Gagal memuat atau memproses file. Error: ` + message);
+                if (!silent) alert(`Gagal memuat atau memproses file. Error: ` + message);
                 csvWorker.terminate();
             }
         };
+
+        csvWorker.onerror = function(err) {
+            isCSVLoading = false;
+            hideLoadingProgress();
+            console.error("[CSV Worker Error]", err);
+        };
     } else {
+        isCSVLoading = false;
         hideLoadingProgress();
-        alert("Browser Anda tidak mendukung Web Worker.");
+        if (!silent) alert("Browser Anda tidak mendukung Web Worker.");
     }
 }
 
@@ -127,7 +166,7 @@ async function kosongkanData() {
     );
 
     if(isConfirmed) {
-        alumni = [];
+        alumni.length = 0; // Menggunakan .length = 0 agar referensi array global tidak terputus
         saveData();
         if (typeof currentPageTable !== 'undefined') currentPageTable = 1;
         if (typeof currentPageVerify !== 'undefined') currentPageVerify = 1;
@@ -181,9 +220,21 @@ function exportCSV() {
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-            alert(`Berhasil mengekspor ${alumni.length} data alumni ke CSV.`);
+            
+            // Panggil animasi kustom di ui.js
+            if (typeof showExportSuccessAnimation === 'function') {
+                showExportSuccessAnimation(alumni.length);
+            } else {
+                alert(`Berhasil mengekspor ${alumni.length} data alumni ke CSV.`);
+            }
         }, 100);
-    } catch (error) { alert("Gagal mengekspor data ke CSV."); }
+    } catch (error) { 
+        if (typeof showCustomAlert === 'function') {
+            showCustomAlert("Gagal", "Gagal mengekspor data ke CSV.", { bgClass: "bg-red-100", textClass: "text-red-600", iconClass: "fas fa-exclamation-triangle" });
+        } else {
+            alert("Gagal mengekspor data ke CSV."); 
+        }
+    }
 }
 
 // ==========================================
@@ -201,6 +252,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         render();
         const lastPage = localStorage.getItem('lastActivePage') || 'dashboard';
         showPage(lastPage);
+        // Auto-load CSV jika data alumni masih kosong
+        if (alumni.length === 0) {
+            loadDefaultCSV(true, true);
+        } else {
+            // Jika data sudah ada tapi belum dilacak, langsung auto track
+            setTimeout(() => {
+                autoAnalisisLengkap(true);
+            }, 1000);
+        }
         return;
     }
     render();

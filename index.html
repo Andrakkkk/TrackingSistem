@@ -197,15 +197,78 @@
                                 <h3 class="font-bold text-gray-800 text-lg">Grafik Volume Data Alumni</h3>
                                 <p class="text-xs text-gray-500">Distribusi jumlah alumni berdasarkan tahun lulus.</p>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <label class="text-sm text-gray-600">Load Data dari CSV:</label>
-                                <button onclick="loadDefaultCSV()" class="px-4 py-2 bg-umm text-white rounded-lg hover:bg-red-700 transition text-sm flex items-center gap-2">
-                                    <i class="fas fa-file-upload mr-2"></i>Load File
+                            <div class="flex items-center">
+                                <button onclick="autoAnalisisLengkap()" class="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:from-red-700 hover:to-red-600 transition-all shadow-md hover:shadow-lg text-sm font-semibold flex items-center gap-2 transform hover:-translate-y-0.5">
+                                    <i class="fas fa-rocket"></i> Jalankan Pelacakan
                                 </button>
                             </div>
                         </div>
                         <div class="w-full flex items-center justify-center relative min-h-[300px]">
                             <canvas id="volumeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- PENILAIAN KUALITAS DATA (REVERTED TO GAUGE + BARS) -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row gap-8">
+                        <!-- Skor Total -->
+                        <div class="flex-shrink-0 w-full md:w-1/3 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl border border-indigo-100">
+                            <h3 class="font-bold text-gray-800 mb-4 text-center">Penilaian Kualitas Pelacakan</h3>
+                            <div class="relative w-36 h-36 flex items-center justify-center mb-3">
+                                <svg class="w-full h-full transform -rotate-90 drop-shadow-sm" viewBox="0 0 36 36">
+                                    <path class="text-white/50" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path id="scoreCircle" class="text-indigo-600 transition-all duration-1500 ease-out" stroke-dasharray="0, 100" stroke-width="3" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                                <div class="absolute flex flex-col items-center justify-center bg-white rounded-full w-28 h-28 shadow-sm">
+                                    <span id="totalScore" class="text-4xl font-black text-indigo-700 tracking-tight">0</span>
+                                    <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5">Total</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-center text-indigo-600/70 font-medium px-4">Diukur dari Coverage (40%), Accuracy (40%), dan Completeness (20%)</p>
+                        </div>
+                        
+                        <!-- Detail Metrik -->
+                        <div class="flex-1 flex flex-col justify-center space-y-6 py-2">
+                            <!-- Coverage -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-800 flex items-center gap-2"><div class="w-6 h-6 rounded bg-green-100 text-green-600 flex items-center justify-center"><i class="fas fa-database text-xs"></i></div> Coverage <span class="text-xs font-normal text-gray-400 ml-1">(40% Bobot)</span></h4>
+                                        <p id="coverageDesc" class="text-[11px] text-gray-500 mt-1 ml-8">0 dari 142.292 data ditemukan.</p>
+                                    </div>
+                                    <span id="coverageScoreTxt" class="text-sm font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">0</span>
+                                </div>
+                                <div class="bg-gray-100 rounded-full h-2.5 ml-8 w-[calc(100%-2rem)] overflow-hidden">
+                                    <div id="coverageBar" class="bg-gradient-to-r from-green-400 to-green-500 h-2.5 rounded-full transition-all duration-1000 relative" style="width: 0%"><div class="absolute inset-0 bg-white/20 rounded-full" style="background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem;"></div></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Accuracy -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-800 flex items-center gap-2"><div class="w-6 h-6 rounded bg-pink-100 text-pink-600 flex items-center justify-center"><i class="fas fa-bullseye text-xs"></i></div> Accuracy <span class="text-xs font-normal text-gray-400 ml-1">(40% Bobot)</span></h4>
+                                        <p id="accuracyDesc" class="text-[11px] text-gray-500 mt-1 ml-8">0 data valid dari sampling 500 data.</p>
+                                    </div>
+                                    <span id="accuracyScoreTxt" class="text-sm font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded">0</span>
+                                </div>
+                                <div class="bg-gray-100 rounded-full h-2.5 ml-8 w-[calc(100%-2rem)] overflow-hidden">
+                                    <div id="accuracyBar" class="bg-gradient-to-r from-pink-400 to-pink-500 h-2.5 rounded-full transition-all duration-1000 relative" style="width: 0%"><div class="absolute inset-0 bg-white/20 rounded-full" style="background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem;"></div></div>
+                                </div>
+                            </div>
+
+                            <!-- Completeness -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-800 flex items-center gap-2"><div class="w-6 h-6 rounded bg-sky-100 text-sky-600 flex items-center justify-center"><i class="fas fa-tasks text-xs"></i></div> Completeness <span class="text-xs font-normal text-gray-400 ml-1">(20% Bobot)</span></h4>
+                                        <p id="completenessDesc" class="text-[11px] text-gray-500 mt-1 ml-8">Rata-rata field terisi: 0.00 dari 4 field utama.</p>
+                                    </div>
+                                    <span id="completenessScoreTxt" class="text-sm font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded">0</span>
+                                </div>
+                                <div class="bg-gray-100 rounded-full h-2.5 ml-8 w-[calc(100%-2rem)] overflow-hidden">
+                                    <div id="completenessBar" class="bg-gradient-to-r from-sky-400 to-sky-500 h-2.5 rounded-full transition-all duration-1000 relative" style="width: 0%"><div class="absolute inset-0 bg-white/20 rounded-full" style="background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem;"></div></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -352,6 +415,40 @@
                             <button onclick="generateProfilMassal()" class="flex-1 md:flex-none bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200 px-4 py-2 rounded-xl shadow-sm text-xs font-semibold transition flex items-center justify-center gap-2"><i class="fas fa-satellite-dish"></i> Scrapping Data </button>
                             <div class="w-px h-8 bg-gray-200 hidden md:block mx-1"></div>
                             <button onclick="kosongkanData()" class="flex-1 md:flex-none bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200 px-4 py-2 rounded-xl shadow-sm text-xs font-semibold transition flex items-center justify-center gap-2"><i class="fas fa-trash-alt"></i> Kosongkan</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter & Sort Bar -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                            <div class="relative w-full sm:w-56">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" id="searchTracking" oninput="applyFilterSort()" placeholder="Cari nama atau NIM..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition text-sm">
+                            </div>
+                            <div class="relative w-full sm:w-48">
+                                <i class="fas fa-filter absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                <select id="filterStatus" onchange="applyFilterSort()" class="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition text-sm appearance-none cursor-pointer">
+                                    <option value="Semua">Semua Status</option>
+                                    <option value="Teridentifikasi">Teridentifikasi</option>
+                                    <option value="Perlu Verifikasi">Perlu Verifikasi</option>
+                                    <option value="Tidak Cocok">Tidak Cocok</option>
+                                    <option value="Belum Dilacak">Belum Dilacak</option>
+                                </select>
+                                <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+                            </div>
+                            <div class="relative w-full sm:w-48">
+                                <i class="fas fa-sort absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                <select id="sortBy" onchange="applyFilterSort()" class="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-umm outline-none transition text-sm appearance-none cursor-pointer">
+                                    <option value="Terbaru">Urutan Default</option>
+                                    <option value="Skor Tertinggi">Skor Tertinggi</option>
+                                    <option value="Skor Terendah">Skor Terendah</option>
+                                    <option value="Nama A-Z">Nama A-Z</option>
+                                </select>
+                                <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-500 font-medium" id="trackingDataCount">
+                            Menampilkan 0 data
                         </div>
                     </div>
                     
